@@ -11,11 +11,15 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.Optional;
 
 @Service
 @Slf4j
 public class GestoPagoTokenServiceImpl implements GestoPagoTokenService {
+
+    /** Segundos de margen antes de que el token venza para renovarlo a tiempo. */
+    private static final long MARGEN_VIGENCIA_SEGUNDOS = 30;
 
     private final GestoPagoAuthClient gestoPagoAuthClient;
     private final GestoPagoTokenRepository tokenRepository;
@@ -76,5 +80,38 @@ public class GestoPagoTokenServiceImpl implements GestoPagoTokenService {
     @Override
     public Optional<GestoPagoToken> obtenerTokenActivo(Integer idDistribuidor, String codigoDispositivo) {
         return tokenRepository.findByIdDistribuidorAndCodigoDispositivo(idDistribuidor, codigoDispositivo);
+    }
+
+    @Override
+    public Optional<String> obtenerTokenVigente() {
+        Optional<GestoPagoToken> actual = obtenerTokenActivo(idDistribuidor, codigoDispositivo);
+
+        if (actual.isPresent() && estaVigiente(actual.get())) {
+            return Optional.of(actual.get().getToken());
+        }
+
+        // Sin token o expirado: se renueva con las credenciales del sistema
+        log.info("Token GestoPago ausente o expirado (distribuidor={}); renovando antes de usarlo", idDistribuidor);
+        renovarToken();
+
+        return obtenerTokenActivo(idDistribuidor, codigoDispositivo)
+                .filter(this::estaVigiente)
+                .map(GestoPagoToken::getToken);
+    }
+
+    /**
+     * Un token se considera vigente si está activo y todavía no alcanza su
+     * fecha de expiración ({@code fecha_actualizacion + expires_in}),
+     * con un margen de seguridad de 30 segundos.
+     */
+    private boolean estaVigiente(GestoPagoToken token) {
+        if (!Boolean.TRUE.equals(token.getActivo())) {
+            return false;
+        }
+        if (token.getExpiresIn() == null || token.getFechaActualizacion() == null) {
+            return true;
+        }
+        LocalDateTime expira = token.getFechaActualizacion().plusSeconds(token.getExpiresIn());
+        return expira.isAfter(LocalDateTime.now().plusSeconds(MARGEN_VIGENCIA_SEGUNDOS));
     }
 }
