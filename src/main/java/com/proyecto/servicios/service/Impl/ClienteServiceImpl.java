@@ -10,6 +10,7 @@ import com.proyecto.servicios.model.clientes.ClienteUpdateRequest;
 import com.proyecto.servicios.repositorys.catalogos.*;
 import com.proyecto.servicios.repositorys.clientes.CuentaBancariaRepository;
 import com.proyecto.servicios.repositorys.clientes.PersonaFisicaRepository;
+import com.proyecto.servicios.repositorys.clientes.UsuarioRepository;
 import com.proyecto.servicios.service.ClienteService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -46,6 +47,12 @@ public class ClienteServiceImpl implements ClienteService {
 
     @Autowired
     private CatalogoEstadoCivilRepository catalogoEstadoCivilRepository;
+
+    @Autowired
+    private UsuarioRepository usuarioRepository;
+
+    @Autowired
+    private org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
 
     @Override
     @Transactional
@@ -133,6 +140,14 @@ public class ClienteServiceImpl implements ClienteService {
         cuentaBancaria.setPersonaFisica(personaFisica);
         cuentaBancaria.setEstatus("ACTIVA");
         cuentaBancariaRepository.save(cuentaBancaria);
+
+        // Crear usuario automáticamente
+        Usuario usuario = new Usuario();
+        usuario.setCliente(personaFisica);
+        usuario.setCorreo(request.getCorreo());
+        usuario.setPassword(passwordEncoder.encode(request.getPassword()));
+        usuario.setActivo(true);
+        usuarioRepository.save(usuario);
 
         log.info("Cliente creado exitosamente con ID: {}", personaFisica.getId());
         return mapToResponse(personaFisica, cuentaBancaria);

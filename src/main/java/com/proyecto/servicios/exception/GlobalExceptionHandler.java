@@ -58,6 +58,18 @@ public class GlobalExceptionHandler {
                         .build());
     }
 
+    @ExceptionHandler(UsuarioException.class)
+    public ResponseEntity<ApiResponse<Void>> manejarUsuarioException(UsuarioException ex) {
+        log.error("UsuarioException [{}] - {}", ex.getCode(), ex.getMessage());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(ApiResponse.<Void>builder()
+                        .code(ex.getCode())
+                        .message(ex.getMessage())
+                        .timestamp(LocalDateTime.now())
+                        .data(null)
+                        .build());
+    }
+
     @ExceptionHandler(ValidationException.class)
     public ResponseEntity<ApiResponse<Void>> manejarValidationException(ValidationException ex) {
         log.error("ValidationException [{}] - {}", ex.getCode(), ex.getMessage());
