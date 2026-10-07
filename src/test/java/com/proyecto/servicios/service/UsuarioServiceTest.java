@@ -11,11 +11,11 @@ import com.proyecto.servicios.service.Impl.UsuarioServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import java.lang.reflect.Field;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -34,14 +34,18 @@ class UsuarioServiceTest {
     @Mock
     private PasswordEncoder passwordEncoder;
 
-    @InjectMocks
     private UsuarioServiceImpl usuarioService;
 
     private Usuario usuario;
     private PersonaFisica persona;
 
     @BeforeEach
-    void setUp() {
+    void setUp() throws Exception {
+        usuarioService = new UsuarioServiceImpl();
+        injectField("usuarioRepository", usuarioRepository);
+        injectField("personaFisicaRepository", personaFisicaRepository);
+        injectField("passwordEncoder", passwordEncoder);
+
         persona = new PersonaFisica();
         persona.setId(1L);
         persona.setNombre("Juan");
@@ -52,6 +56,12 @@ class UsuarioServiceTest {
         usuario.setCorreo("juan@email.com");
         usuario.setPassword("encryptedPassword");
         usuario.setActivo(true);
+    }
+
+    private void injectField(String fieldName, Object value) throws Exception {
+        Field field = UsuarioServiceImpl.class.getDeclaredField(fieldName);
+        field.setAccessible(true);
+        field.set(usuarioService, value);
     }
 
     @Test
@@ -98,6 +108,7 @@ class UsuarioServiceTest {
     @Test
     void desactivarUsuario_DesactivaCorrectamente() {
         when(usuarioRepository.findById(1L)).thenReturn(Optional.of(usuario));
+        when(usuarioRepository.save(any())).thenReturn(usuario);
 
         UsuarioResponse response = usuarioService.desactivarUsuario(1L);
 

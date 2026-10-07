@@ -10,15 +10,14 @@ import com.proyecto.servicios.service.Impl.AuthServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import java.lang.reflect.Field;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -30,14 +29,19 @@ class AuthServiceTest {
     @Mock
     private PasswordEncoder passwordEncoder;
 
-    @InjectMocks
     private AuthServiceImpl authService;
 
     private LoginRequest request;
     private Usuario usuario;
 
     @BeforeEach
-    void setUp() {
+    void setUp() throws Exception {
+        authService = new AuthServiceImpl();
+        injectField("usuarioRepository", usuarioRepository);
+        injectField("passwordEncoder", passwordEncoder);
+        injectField("jwtSecret", "miClaveSecretaSuperSeguraParaJWT2024");
+        injectField("jwtExpiration", 86400000L);
+
         request = new LoginRequest();
         request.setCorreo("juan@email.com");
         request.setPassword("Password123!");
@@ -52,6 +56,12 @@ class AuthServiceTest {
         persona.setNombre("Juan");
         persona.setApellidoPaterno("Pérez");
         usuario.setCliente(persona);
+    }
+
+    private void injectField(String fieldName, Object value) throws Exception {
+        Field field = AuthServiceImpl.class.getDeclaredField(fieldName);
+        field.setAccessible(true);
+        field.set(authService, value);
     }
 
     @Test

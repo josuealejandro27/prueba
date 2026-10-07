@@ -14,11 +14,11 @@ import com.proyecto.servicios.service.Impl.ClienteServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import java.lang.reflect.Field;
 import java.math.BigDecimal;
 import java.util.Date;
 import java.util.Optional;
@@ -51,7 +51,6 @@ class ClienteServiceTest {
     @Mock
     private PasswordEncoder passwordEncoder;
 
-    @InjectMocks
     private ClienteServiceImpl clienteService;
 
     private ClienteRequest request;
@@ -59,7 +58,16 @@ class ClienteServiceTest {
     private CuentaBancaria cuentaBancaria;
 
     @BeforeEach
-    void setUp() {
+    void setUp() throws Exception {
+        clienteService = new ClienteServiceImpl();
+        injectField("personaFisicaRepository", personaFisicaRepository);
+        injectField("cuentaBancariaRepository", cuentaBancariaRepository);
+        injectField("catalogoGenerosRepository", catalogoGenerosRepository);
+        injectField("catalogoPaisRepository", catalogoPaisRepository);
+        injectField("catalogoEstadoCivilRepository", catalogoEstadoCivilRepository);
+        injectField("usuarioRepository", usuarioRepository);
+        injectField("passwordEncoder", passwordEncoder);
+
         request = new ClienteRequest();
         request.setNombre("Juan");
         request.setApellidoPaterno("Pérez");
@@ -102,6 +110,12 @@ class ClienteServiceTest {
         cuentaBancaria.setSaldo(new BigDecimal("1000.00"));
         cuentaBancaria.setEstatus("ACTIVA");
         cuentaBancaria.setPersonaFisica(personaFisica);
+    }
+
+    private void injectField(String fieldName, Object value) throws Exception {
+        Field field = ClienteServiceImpl.class.getDeclaredField(fieldName);
+        field.setAccessible(true);
+        field.set(clienteService, value);
     }
 
     @Test
@@ -179,9 +193,16 @@ class ClienteServiceTest {
 
     @Test
     void desactivarCliente_DesactivaUsuario() {
+        Usuario usuarioMock = new Usuario();
+        usuarioMock.setId(1L);
+        usuarioMock.setActivo(true);
+        
         when(personaFisicaRepository.findById(1L)).thenReturn(Optional.of(personaFisica));
         when(cuentaBancariaRepository.findByPersonaFisicaId(1L)).thenReturn(Optional.of(cuentaBancaria));
-        when(usuarioRepository.findByClienteId(1L)).thenReturn(Optional.of(new Usuario()));
+        when(usuarioRepository.findByClienteId(1L)).thenReturn(Optional.of(usuarioMock));
+        when(personaFisicaRepository.save(any())).thenReturn(personaFisica);
+        when(cuentaBancariaRepository.save(any())).thenReturn(cuentaBancaria);
+        when(usuarioRepository.save(any())).thenReturn(usuarioMock);
 
         clienteService.desactivarCliente(1L);
 
