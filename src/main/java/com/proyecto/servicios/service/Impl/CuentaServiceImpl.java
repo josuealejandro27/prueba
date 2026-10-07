@@ -47,11 +47,9 @@ public class CuentaServiceImpl implements CuentaService {
     public List<CuentaResponse> obtenerCuentasPorCliente(Long clienteId) {
         log.info("Consultando cuentas del cliente con ID: {}", clienteId);
 
-        List<CuentaBancaria> cuentas = cuentaBancariaRepository.findByPersonaFisicaId(clienteId);
-
-        return cuentas.stream()
-                .map(this::mapToResponse)
-                .collect(Collectors.toList());
+        return cuentaBancariaRepository.findByPersonaFisicaId(clienteId)
+                .map(cuenta -> List.of(mapToResponse(cuenta)))
+                .orElse(List.of());
     }
 
     @Override

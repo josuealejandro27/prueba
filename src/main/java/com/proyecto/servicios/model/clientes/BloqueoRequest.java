@@ -11,5 +11,5 @@ import lombok.Setter;
 public class BloqueoRequest {
 
     @NotNull(message = "El estado de bloqueo es obligatorio")
-    private Boolean bloqueado;
+    private boolean bloqueado;
 }
