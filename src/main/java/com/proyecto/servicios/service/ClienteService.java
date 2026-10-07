@@ -13,6 +13,12 @@ public interface ClienteService {
 
     ClienteResponse obtenerCliente(Long id);
 
+    ClienteResponse obtenerClientePorCurp(String curp);
+
+    ClienteResponse obtenerClientePorRfc(String rfc);
+
+    ClienteResponse obtenerClientePorNumeroCuenta(String numeroCuenta);
+
     List<ClienteResponse> obtenerTodos();
 
     ClienteResponse bloquearCuenta(Long id, boolean bloqueado);

@@ -41,6 +41,24 @@ public class ClienteController {
         return ResponseEntity.ok(ApiResponse.of(ApiResponseEnum.OK, cliente));
     }
 
+    @GetMapping(value = "/clientes/curp/{curp}", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<ApiResponse<ClienteResponse>> obtenerClientePorCurp(@PathVariable String curp) {
+        ClienteResponse cliente = clienteService.obtenerClientePorCurp(curp);
+        return ResponseEntity.ok(ApiResponse.of(ApiResponseEnum.OK, cliente));
+    }
+
+    @GetMapping(value = "/clientes/rfc/{rfc}", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<ApiResponse<ClienteResponse>> obtenerClientePorRfc(@PathVariable String rfc) {
+        ClienteResponse cliente = clienteService.obtenerClientePorRfc(rfc);
+        return ResponseEntity.ok(ApiResponse.of(ApiResponseEnum.OK, cliente));
+    }
+
+    @GetMapping(value = "/clientes/cuenta/{numeroCuenta}", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<ApiResponse<ClienteResponse>> obtenerClientePorNumeroCuenta(@PathVariable String numeroCuenta) {
+        ClienteResponse cliente = clienteService.obtenerClientePorNumeroCuenta(numeroCuenta);
+        return ResponseEntity.ok(ApiResponse.of(ApiResponseEnum.OK, cliente));
+    }
+
     @GetMapping(value = "/clientes", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ApiResponse<List<ClienteResponse>>> obtenerTodos() {
         List<ClienteResponse> clientes = clienteService.obtenerTodos();

@@ -213,6 +213,45 @@ public class ClienteServiceImpl implements ClienteService {
     }
 
     @Override
+    public ClienteResponse obtenerClientePorCurp(String curp) {
+        log.info("Consultando cliente con CURP: {}", curp);
+
+        PersonaFisica personaFisica = personaFisicaRepository.findByCurp(curp)
+                .orElseThrow(() -> new ValidationException(CODIGO_VALIDACION, "Cliente no encontrado con CURP: " + curp));
+
+        CuentaBancaria cuentaBancaria = cuentaBancariaRepository.findByPersonaFisicaId(personaFisica.getId())
+                .orElseThrow(() -> new ValidationException(CODIGO_VALIDACION, "Cuenta bancaria no encontrada para el cliente con CURP: " + curp));
+
+        return mapToResponse(personaFisica, cuentaBancaria);
+    }
+
+    @Override
+    public ClienteResponse obtenerClientePorRfc(String rfc) {
+        log.info("Consultando cliente con RFC: {}", rfc);
+
+        PersonaFisica personaFisica = personaFisicaRepository.findByRfc(rfc)
+                .orElseThrow(() -> new ValidationException(CODIGO_VALIDACION, "Cliente no encontrado con RFC: " + rfc));
+
+        CuentaBancaria cuentaBancaria = cuentaBancariaRepository.findByPersonaFisicaId(personaFisica.getId())
+                .orElseThrow(() -> new ValidationException(CODIGO_VALIDACION, "Cuenta bancaria no encontrada para el cliente con RFC: " + rfc));
+
+        return mapToResponse(personaFisica, cuentaBancaria);
+    }
+
+    @Override
+    public ClienteResponse obtenerClientePorNumeroCuenta(String numeroCuenta) {
+        log.info("Consultando cliente con número de cuenta: {}", numeroCuenta);
+
+        CuentaBancaria cuentaBancaria = cuentaBancariaRepository.findByNumeroCuenta(numeroCuenta)
+                .orElseThrow(() -> new ValidationException(CODIGO_VALIDACION, "Cuenta bancaria no encontrada con número: " + numeroCuenta));
+
+        PersonaFisica personaFisica = personaFisicaRepository.findById(cuentaBancaria.getPersonaFisica().getId())
+                .orElseThrow(() -> new ValidationException(CODIGO_VALIDACION, "Cliente no encontrado para la cuenta con número: " + numeroCuenta));
+
+        return mapToResponse(personaFisica, cuentaBancaria);
+    }
+
+    @Override
     public List<ClienteResponse> obtenerTodos() {
         log.info("Consultando todos los clientes");
 
