@@ -30,6 +30,12 @@ public interface PersonaFisicaRepository extends JpaRepository<PersonaFisica, Lo
     @Query("SELECT p FROM PersonaFisica p WHERE p.fechaCreacion BETWEEN :fechaInicio AND :fechaFin")
     List<PersonaFisica> findByFechaCreacionBetween(@Param("fechaInicio") Date fechaInicio, @Param("fechaFin") Date fechaFin);
 
+    @Query("SELECT p FROM PersonaFisica p LEFT JOIN FETCH p.domicilio LEFT JOIN FETCH p.informacionLaboral WHERE p.id = :id")
+    Optional<PersonaFisica> findByIdWithDetails(@Param("id") Long id);
+
+    @Query("SELECT p FROM PersonaFisica p LEFT JOIN FETCH p.domicilio LEFT JOIN FETCH p.informacionLaboral")
+    List<PersonaFisica> findAllWithDetails();
+
     boolean existsByCurp(String curp);
 
     boolean existsByRfc(String rfc);

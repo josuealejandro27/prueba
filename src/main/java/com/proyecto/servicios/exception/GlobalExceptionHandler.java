@@ -136,6 +136,30 @@ public class GlobalExceptionHandler {
         return responder(ApiResponseEnum.ERROR_INTERNO);
     }
 
+    @ExceptionHandler(org.springframework.security.access.AccessDeniedException.class)
+    public ResponseEntity<ApiResponse<Void>> manejarAccesoDenegado(org.springframework.security.access.AccessDeniedException ex) {
+        log.error("Acceso denegado: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(ApiResponse.<Void>builder()
+                        .code("FORBIDDEN")
+                        .message("Acceso denegado")
+                        .timestamp(LocalDateTime.now())
+                        .data(null)
+                        .build());
+    }
+
+    @ExceptionHandler(org.springframework.security.authentication.BadCredentialsException.class)
+    public ResponseEntity<ApiResponse<Void>> manejarCredencialesInvalidas(org.springframework.security.authentication.BadCredentialsException ex) {
+        log.error("Credenciales inválidas: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(ApiResponse.<Void>builder()
+                        .code("UNAUTHORIZED")
+                        .message("Credenciales inválidas")
+                        .timestamp(LocalDateTime.now())
+                        .data(null)
+                        .build());
+    }
+
     private ResponseEntity<ApiResponse<Void>> responder(ApiResponseEnum response) {
         return ResponseEntity.status(response.getHttpStatus())
                 .body(ApiResponse.of(response, null));
