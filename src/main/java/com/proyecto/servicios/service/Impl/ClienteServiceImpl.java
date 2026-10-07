@@ -62,14 +62,18 @@ public class ClienteServiceImpl implements ClienteService {
         // Validar mayoría de edad
         validarMayorEdad(request.getFechaNacimiento());
 
+        // Normalizar CURP y RFC a mayúsculas
+        String curpNormalizada = request.getCurp().toUpperCase();
+        String rfcNormalizado = request.getRfc().toUpperCase();
+
         // Validar que no exista otro cliente con la misma CURP
-        if (personaFisicaRepository.existsByCurp(request.getCurp())) {
-            throw new ClienteException(CODIGO_CLIENTE, "Ya existe un cliente con la CURP: " + request.getCurp());
+        if (personaFisicaRepository.existsByCurp(curpNormalizada)) {
+            throw new ClienteException(CODIGO_CLIENTE, "Ya existe un cliente con la CURP: " + curpNormalizada);
         }
 
         // Validar que no exista otro cliente con el mismo RFC
-        if (personaFisicaRepository.existsByRfc(request.getRfc())) {
-            throw new ClienteException(CODIGO_CLIENTE, "Ya existe un cliente con el RFC: " + request.getRfc());
+        if (personaFisicaRepository.existsByRfc(rfcNormalizado)) {
+            throw new ClienteException(CODIGO_CLIENTE, "Ya existe un cliente con el RFC: " + rfcNormalizado);
         }
 
         // Validar que no exista otro cliente con el mismo correo
@@ -84,8 +88,8 @@ public class ClienteServiceImpl implements ClienteService {
         personaFisica.setApellidoPaterno(request.getApellidoPaterno());
         personaFisica.setApellidoMaterno(request.getApellidoMaterno());
         personaFisica.setFechaNacimiento(request.getFechaNacimiento());
-        personaFisica.setCurp(request.getCurp());
-        personaFisica.setRfc(request.getRfc());
+        personaFisica.setCurp(curpNormalizada);
+        personaFisica.setRfc(rfcNormalizado);
 
         // Asignar catálogos
         CatalogoGeneros genero = catalogoGenerosRepository.findById(request.getGeneroId())
@@ -471,12 +475,23 @@ public class ClienteServiceImpl implements ClienteService {
         personaFisica.setActivo(false);
         personaFisica = personaFisicaRepository.save(personaFisica);
 
-        // Cancelar la cuenta asociada
-        CuentaBancaria cuentaBancaria = cuentaBancariaRepository.findByPersonaFisicaId(id)
-                .orElseThrow(() -> new ValidationException(CODIGO_VALIDACION, "Cuenta bancaria no encontrada"));
+        // Cancelar todas las cuentas asociadas
+        List<CuentaBancaria> cuentas = cuentaBancariaRepository.findByPersonaFisicaId(id)
+                .map(List::of)
+                .orElse(List.of());
+        
+        for (CuentaBancaria cuenta : cuentas) {
+            cuenta.setEstatus("CANCELADA");
+            cuentaBancariaRepository.save(cuenta);
+        }
 
-        cuentaBancaria.setEstatus("CANCELADA");
-        cuentaBancariaRepository.save(cuentaBancaria);
+        // Desactivar el usuario asociado
+        usuarioRepository.findByClienteId(id).ifPresent(usuario -> {
+            usuario.setActivo(false);
+            usuarioRepository.save(usuario);
+        });
+
+        CuentaBancaria cuentaBancaria = cuentas.isEmpty() ? null : cuentas.get(0);
 
         log.info("Cliente desactivado exitosamente");
         return mapToResponse(personaFisica, cuentaBancaria);

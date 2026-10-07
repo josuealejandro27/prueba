@@ -36,6 +36,13 @@ public class CuentaController {
         return ResponseEntity.ok(ApiResponse.of(ApiResponseEnum.OK, cuentas));
     }
 
+    // Consultar saldo de una cuenta
+    @GetMapping(value = "/cuentas/{numeroCuenta}/saldo", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<ApiResponse<java.math.BigDecimal>> consultarSaldo(@PathVariable String numeroCuenta) {
+        CuentaResponse cuenta = cuentaService.obtenerCuentaPorNumero(numeroCuenta);
+        return ResponseEntity.ok(ApiResponse.of(ApiResponseEnum.OK, cuenta.getSaldo()));
+    }
+
     // Consultar cuentas por estatus
     @GetMapping(value = "/cuentas", params = "estatus", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ApiResponse<List<CuentaResponse>>> obtenerCuentasPorEstatus(@RequestParam String estatus) {
@@ -57,8 +64,8 @@ public class CuentaController {
         return new ResponseEntity<>(ApiResponse.of(ApiResponseEnum.OK, cuenta), HttpStatus.CREATED);
     }
 
-    // Actualizar cuenta (parcial)
-    @PatchMapping(value = "/cuentas/{numeroCuenta}", produces = MediaType.APPLICATION_JSON_VALUE, consumes = MediaType.APPLICATION_JSON_VALUE)
+    // Actualizar cuenta (parcial) - PUT según requisito académico
+    @PutMapping(value = "/cuentas/{numeroCuenta}", produces = MediaType.APPLICATION_JSON_VALUE, consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ApiResponse<CuentaResponse>> actualizarCuenta(@PathVariable String numeroCuenta, @Valid @RequestBody CuentaUpdateRequest request) {
         CuentaResponse cuenta = cuentaService.actualizarCuenta(numeroCuenta, request);
         return ResponseEntity.ok(ApiResponse.of(ApiResponseEnum.OK, cuenta));

@@ -30,8 +30,8 @@ public class ClienteController {
         return new ResponseEntity<>(ApiResponse.of(ApiResponseEnum.OK, cliente), HttpStatus.CREATED);
     }
 
-    // Actualizar cliente (parcial)
-    @PatchMapping(value = "/clientes/{id}", produces = MediaType.APPLICATION_JSON_VALUE, consumes = MediaType.APPLICATION_JSON_VALUE)
+    // Actualizar cliente (parcial) - PUT según requisito académico
+    @PutMapping(value = "/clientes/{id}", produces = MediaType.APPLICATION_JSON_VALUE, consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ApiResponse<ClienteResponse>> actualizarCliente(@PathVariable Long id, @Valid @RequestBody ClienteUpdateRequest request) {
         ClienteResponse cliente = clienteService.actualizarCliente(id, request);
         return ResponseEntity.ok(ApiResponse.of(ApiResponseEnum.OK, cliente));

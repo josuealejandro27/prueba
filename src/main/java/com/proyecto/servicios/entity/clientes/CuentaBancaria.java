@@ -37,8 +37,8 @@ public class CuentaBancaria {
     @Column(nullable = false, name = "fecha_apertura")
     private LocalDateTime fechaApertura;
 
-    @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "persona_fisica_id", nullable = false, unique = true)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "persona_fisica_id", nullable = false)
     private PersonaFisica personaFisica;
 
     @NotBlank(message = "El estatus es obligatorio")
