@@ -24,7 +24,7 @@ public class ClienteResponse {
     private String nacionalidad;
     private String estadoCivil;
     private String correo;
-    private String numeroTelefono;
+    private Integer numeroTelefono;
     private String calle;
     private String colonia;
     private String municipio;
@@ -38,4 +38,5 @@ public class ClienteResponse {
     private BigDecimal saldo;
     private boolean cuentaBloqueada;
     private boolean loginBloqueado;
+    private boolean activo;
 }

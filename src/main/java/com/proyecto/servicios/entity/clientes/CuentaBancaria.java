@@ -1,6 +1,7 @@
 package com.proyecto.servicios.entity.clientes;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -22,9 +23,14 @@ public class CuentaBancaria {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @NotBlank(message = "El número de cuenta es obligatorio")
+    @Size(min = 16, max = 16, message = "El número de cuenta debe tener exactamente 16 caracteres")
     @Column(nullable = false, unique = true, length = 16, name = "numero_cuenta")
     private String numeroCuenta;
 
+    @NotNull(message = "El saldo es obligatorio")
+    @DecimalMin(value = "0.0", message = "El saldo no puede ser negativo")
+    @Digits(integer = 8, fraction = 2, message = "El saldo no puede tener más de 8 dígitos enteros y 2 decimales")
     @Column(nullable = false, precision = 10, scale = 2, name = "saldo")
     private BigDecimal saldo;
 
@@ -32,8 +38,13 @@ public class CuentaBancaria {
     private LocalDateTime fechaApertura;
 
     @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "persona_fisica_id", nullable = false)
+    @JoinColumn(name = "persona_fisica_id", nullable = false, unique = true)
     private PersonaFisica personaFisica;
+
+    @NotBlank(message = "El estatus es obligatorio")
+    @Pattern(regexp = "^(ACTIVA|BLOQUEADA|CANCELADA)$", message = "El estatus debe ser ACTIVA, BLOQUEADA o CANCELADA")
+    @Column(nullable = false, name = "estatus", length = 20)
+    private String estatus;
 
     @PrePersist
     @PreUpdate

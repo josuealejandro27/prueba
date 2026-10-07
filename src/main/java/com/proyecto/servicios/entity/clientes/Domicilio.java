@@ -2,11 +2,11 @@ package com.proyecto.servicios.entity.clientes;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Embeddable;
+import jakarta.validation.constraints.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.checkerframework.checker.units.qual.C;
 
 @Embeddable
 @Getter
@@ -15,27 +15,42 @@ import org.checkerframework.checker.units.qual.C;
 @NoArgsConstructor
 public class Domicilio {
 
-    @Column(nullable = false,name = "calle",length = 100,columnDefinition = "TEXT")
+    @NotBlank(message = "La calle es obligatoria")
+    @Size(max = 100, message = "La calle no puede tener más de 100 caracteres")
+    @Column(nullable = false, name = "calle", length = 100, columnDefinition = "TEXT")
     private String calle;
 
-    @Column(nullable = false,name = "noExterior",length = 10)
+    @NotNull(message = "El número exterior es obligatorio")
+    @Min(value = 1, message = "El número exterior debe ser un valor positivo")
+    @Column(nullable = false, name = "no_exterior", length = 10)
     private Short noExterior;
 
-    @Column(nullable = true, name = "noInterior",length = 10)
+    @Column(nullable = true, name = "no_interior", length = 10)
     private Short noInterior;
 
-    @Column(nullable = false, name = "colonia")
-    private Long colonia;
+    @NotBlank(message = "La colonia es obligatoria")
+    @Size(max = 100, message = "La colonia no puede tener más de 100 caracteres")
+    @Column(nullable = false, name = "colonia", columnDefinition = "TEXT")
+    private String colonia;
 
-    @Column(nullable = false, name = "municipio")
-    private Long municipio;
+    @NotBlank(message = "El municipio es obligatorio")
+    @Size(max = 100, message = "El municipio no puede tener más de 100 caracteres")
+    @Column(nullable = false, name = "municipio", columnDefinition = "TEXT")
+    private String municipio;
 
-    @Column(nullable = false, name = "estado")
-    private Long estado;
+    @NotBlank(message = "El estado es obligatorio")
+    @Size(max = 100, message = "El estado no puede tener más de 100 caracteres")
+    @Column(nullable = false, name = "estado", columnDefinition = "TEXT")
+    private String estado;
 
+    @NotNull(message = "El código postal es obligatorio")
+    @Min(value = 1000, message = "El código postal debe tener exactamente 5 dígitos")
+    @Max(value = 99999, message = "El código postal debe tener exactamente 5 dígitos")
     @Column(nullable = false, name = "cp", length = 5)
     private Integer cp;
 
-    @Column(nullable = false, name = "pais")
-    private Long pais;
+    @NotBlank(message = "El país es obligatorio")
+    @Size(max = 100, message = "El país no puede tener más de 100 caracteres")
+    @Column(nullable = false, name = "pais", columnDefinition = "TEXT")
+    private String pais;
 }

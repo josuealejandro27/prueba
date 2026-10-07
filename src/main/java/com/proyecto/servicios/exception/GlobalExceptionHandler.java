@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.net.SocketTimeoutException;
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeoutException;
@@ -33,6 +34,30 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.of(response, ex.getMessage(), null));
     }
 
+    @ExceptionHandler(ClienteException.class)
+    public ResponseEntity<ApiResponse<Void>> manejarClienteException(ClienteException ex) {
+        log.error("ClienteException [{}] - {}", ex.getCode(), ex.getMessage());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(ApiResponse.<Void>builder()
+                        .code(ex.getCode())
+                        .message(ex.getMessage())
+                        .timestamp(LocalDateTime.now())
+                        .data(null)
+                        .build());
+    }
+
+    @ExceptionHandler(CuentaException.class)
+    public ResponseEntity<ApiResponse<Void>> manejarCuentaException(CuentaException ex) {
+        log.error("CuentaException [{}] - {}", ex.getCode(), ex.getMessage());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(ApiResponse.<Void>builder()
+                        .code(ex.getCode())
+                        .message(ex.getMessage())
+                        .timestamp(LocalDateTime.now())
+                        .data(null)
+                        .build());
+    }
+
     @ExceptionHandler(ValidationException.class)
     public ResponseEntity<ApiResponse<Void>> manejarValidationException(ValidationException ex) {
         log.error("ValidationException [{}] - {}", ex.getCode(), ex.getMessage());
@@ -40,7 +65,7 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.<Void>builder()
                         .code(ex.getCode())
                         .message(ex.getMessage())
-                        .timestamp(java.time.LocalDateTime.now())
+                        .timestamp(LocalDateTime.now())
                         .data(null)
                         .build());
     }
@@ -58,7 +83,7 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.<Map<String, String>>builder()
                         .code("VALIDATION_ERROR")
                         .message("Error de validación en los campos")
-                        .timestamp(java.time.LocalDateTime.now())
+                        .timestamp(LocalDateTime.now())
                         .data(errores)
                         .build());
     }
