@@ -4,6 +4,7 @@ import com.proyecto.servicios.entity.catalogos.CatalogoGeneros;
 import com.proyecto.servicios.enums.ApiResponseEnum;
 import com.proyecto.servicios.model.ApiResponse;
 import com.proyecto.servicios.service.CatalogoGeneroService;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -33,13 +34,13 @@ public class CatalogoGeneroController {
     }
 
     @PostMapping(value = "/catalogo/generos", produces = MediaType.APPLICATION_JSON_VALUE, consumes = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<ApiResponse<CatalogoGeneros>> crear(@RequestBody CatalogoGeneros catalogoGeneros) {
+    public ResponseEntity<ApiResponse<CatalogoGeneros>> crear(@Valid @RequestBody CatalogoGeneros catalogoGeneros) {
         CatalogoGeneros genero = catalogoGeneroService.crear(catalogoGeneros);
         return new ResponseEntity<>(ApiResponse.of(ApiResponseEnum.OK, genero), HttpStatus.CREATED);
     }
 
     @PutMapping(value = "/catalogo/generos/{id}", produces = MediaType.APPLICATION_JSON_VALUE, consumes = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<ApiResponse<CatalogoGeneros>> actualizar(@PathVariable Long id, @RequestBody CatalogoGeneros catalogoGeneros) {
+    public ResponseEntity<ApiResponse<CatalogoGeneros>> actualizar(@PathVariable Long id, @Valid @RequestBody CatalogoGeneros catalogoGeneros) {
         CatalogoGeneros genero = catalogoGeneroService.actualizar(id, catalogoGeneros);
         return ResponseEntity.ok(ApiResponse.of(ApiResponseEnum.OK, genero));
     }

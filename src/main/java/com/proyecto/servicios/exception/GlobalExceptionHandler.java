@@ -5,11 +5,16 @@ import com.proyecto.servicios.model.ApiResponse;
 import feign.FeignException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataAccessResourceFailureException;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.FieldError;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.net.SocketTimeoutException;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.TimeoutException;
 
 /**
@@ -26,6 +31,36 @@ public class GlobalExceptionHandler {
         log.error("CatalogoException [{}] - {}", response.getCode(), ex.getMessage());
         return ResponseEntity.status(response.getHttpStatus())
                 .body(ApiResponse.of(response, ex.getMessage(), null));
+    }
+
+    @ExceptionHandler(ValidationException.class)
+    public ResponseEntity<ApiResponse<Void>> manejarValidationException(ValidationException ex) {
+        log.error("ValidationException [{}] - {}", ex.getCode(), ex.getMessage());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(ApiResponse.<Void>builder()
+                        .code(ex.getCode())
+                        .message(ex.getMessage())
+                        .timestamp(java.time.LocalDateTime.now())
+                        .data(null)
+                        .build());
+    }
+
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<ApiResponse<Map<String, String>>> manejarValidaciones(MethodArgumentNotValidException ex) {
+        Map<String, String> errores = new HashMap<>();
+        ex.getBindingResult().getAllErrors().forEach(error -> {
+            String campo = ((FieldError) error).getField();
+            String mensaje = error.getDefaultMessage();
+            errores.put(campo, mensaje);
+        });
+        log.error("Errores de validación: {}", errores);
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(ApiResponse.<Map<String, String>>builder()
+                        .code("VALIDATION_ERROR")
+                        .message("Error de validación en los campos")
+                        .timestamp(java.time.LocalDateTime.now())
+                        .data(errores)
+                        .build());
     }
 
     @ExceptionHandler(FeignException.Unauthorized.class)

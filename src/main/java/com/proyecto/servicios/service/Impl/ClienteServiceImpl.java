@@ -2,6 +2,7 @@ package com.proyecto.servicios.service.Impl;
 
 import com.proyecto.servicios.entity.catalogos.*;
 import com.proyecto.servicios.entity.clientes.*;
+import com.proyecto.servicios.exception.ValidationException;
 import com.proyecto.servicios.model.clientes.ClienteRequest;
 import com.proyecto.servicios.model.clientes.ClienteResponse;
 import com.proyecto.servicios.repositorys.catalogos.*;
@@ -22,6 +23,8 @@ import java.util.stream.Collectors;
 @Service
 @Slf4j
 public class ClienteServiceImpl implements ClienteService {
+
+    private static final String CODIGO_VALIDACION = "VALIDATION_ERROR";
 
     @Autowired
     private PersonaFisicaRepository personaFisicaRepository;
@@ -45,12 +48,12 @@ public class ClienteServiceImpl implements ClienteService {
 
         // Validar que no exista otro cliente con la misma CURP
         if (personaFisicaRepository.findByCurp(request.getCurp()).isPresent()) {
-            throw new RuntimeException("Ya existe un cliente con la CURP: " + request.getCurp());
+            throw new ValidationException(CODIGO_VALIDACION, "Ya existe un cliente con la CURP: " + request.getCurp());
         }
 
         // Validar que no exista otro cliente con el mismo RFC
         if (personaFisicaRepository.findByRfc(request.getRfc()).isPresent()) {
-            throw new RuntimeException("Ya existe un cliente con el RFC: " + request.getRfc());
+            throw new ValidationException(CODIGO_VALIDACION, "Ya existe un cliente con el RFC: " + request.getRfc());
         }
 
         // Crear PersonaFísica
@@ -65,15 +68,15 @@ public class ClienteServiceImpl implements ClienteService {
 
         // Asignar catálogos
         CatalogoGeneros genero = catalogoGenerosRepository.findById(request.getGeneroId())
-                .orElseThrow(() -> new RuntimeException("Género no encontrado"));
+                .orElseThrow(() -> new ValidationException(CODIGO_VALIDACION, "Género no encontrado con ID: " + request.getGeneroId()));
         personaFisica.setGenero(genero);
 
         CatalogoPais nacionalidad = catalogoPaisRepository.findById(request.getNacionalidadId())
-                .orElseThrow(() -> new RuntimeException("Nacionalidad no encontrada"));
+                .orElseThrow(() -> new ValidationException(CODIGO_VALIDACION, "Nacionalidad no encontrada con ID: " + request.getNacionalidadId()));
         personaFisica.setNacionalidad(nacionalidad);
 
         CatalogoEstadoCivil estadoCivil = catalogoEstadoCivilRepository.findById(request.getEstadoCivilId())
-                .orElseThrow(() -> new RuntimeException("Estado civil no encontrado"));
+                .orElseThrow(() -> new ValidationException(CODIGO_VALIDACION, "Estado civil no encontrado con ID: " + request.getEstadoCivilId()));
         personaFisica.setEstadoCivil(estadoCivil);
 
         // Datos de contacto
@@ -127,7 +130,7 @@ public class ClienteServiceImpl implements ClienteService {
         log.info("Actualizando cliente con ID: {}", id);
 
         PersonaFisica personaFisica = personaFisicaRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Cliente no encontrado con ID: " + id));
+                .orElseThrow(() -> new ValidationException(CODIGO_VALIDACION, "Cliente no encontrado con ID: " + id));
 
         // Actualizar datos personales
         personaFisica.setNombre(request.getNombre());
@@ -140,15 +143,15 @@ public class ClienteServiceImpl implements ClienteService {
 
         // Actualizar catálogos
         CatalogoGeneros genero = catalogoGenerosRepository.findById(request.getGeneroId())
-                .orElseThrow(() -> new RuntimeException("Género no encontrado"));
+                .orElseThrow(() -> new ValidationException(CODIGO_VALIDACION, "Género no encontrado con ID: " + request.getGeneroId()));
         personaFisica.setGenero(genero);
 
         CatalogoPais nacionalidad = catalogoPaisRepository.findById(request.getNacionalidadId())
-                .orElseThrow(() -> new RuntimeException("Nacionalidad no encontrada"));
+                .orElseThrow(() -> new ValidationException(CODIGO_VALIDACION, "Nacionalidad no encontrada con ID: " + request.getNacionalidadId()));
         personaFisica.setNacionalidad(nacionalidad);
 
         CatalogoEstadoCivil estadoCivil = catalogoEstadoCivilRepository.findById(request.getEstadoCivilId())
-                .orElseThrow(() -> new RuntimeException("Estado civil no encontrado"));
+                .orElseThrow(() -> new ValidationException(CODIGO_VALIDACION, "Estado civil no encontrado con ID: " + request.getEstadoCivilId()));
         personaFisica.setEstadoCivil(estadoCivil);
 
         // Actualizar datos de contacto
@@ -190,7 +193,7 @@ public class ClienteServiceImpl implements ClienteService {
         personaFisica = personaFisicaRepository.save(personaFisica);
 
         CuentaBancaria cuentaBancaria = cuentaBancariaRepository.findByPersonaFisicaId(id)
-                .orElseThrow(() -> new RuntimeException("Cuenta bancaria no encontrada"));
+                .orElseThrow(() -> new ValidationException(CODIGO_VALIDACION, "Cuenta bancaria no encontrada para el cliente con ID: " + id));
 
         log.info("Cliente actualizado exitosamente");
         return mapToResponse(personaFisica, cuentaBancaria);
@@ -201,10 +204,10 @@ public class ClienteServiceImpl implements ClienteService {
         log.info("Consultando cliente con ID: {}", id);
 
         PersonaFisica personaFisica = personaFisicaRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Cliente no encontrado con ID: " + id));
+                .orElseThrow(() -> new ValidationException(CODIGO_VALIDACION, "Cliente no encontrado con ID: " + id));
 
         CuentaBancaria cuentaBancaria = cuentaBancariaRepository.findByPersonaFisicaId(id)
-                .orElseThrow(() -> new RuntimeException("Cuenta bancaria no encontrada"));
+                .orElseThrow(() -> new ValidationException(CODIGO_VALIDACION, "Cuenta bancaria no encontrada para el cliente con ID: " + id));
 
         return mapToResponse(personaFisica, cuentaBancaria);
     }
@@ -230,13 +233,13 @@ public class ClienteServiceImpl implements ClienteService {
         log.info("{} cuenta del cliente con ID: {}", bloqueado ? "Bloqueando" : "Desbloqueando", id);
 
         PersonaFisica personaFisica = personaFisicaRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Cliente no encontrado con ID: " + id));
+                .orElseThrow(() -> new ValidationException(CODIGO_VALIDACION, "Cliente no encontrado con ID: " + id));
 
         personaFisica.setCuentaBloqueada(bloqueado);
         personaFisica = personaFisicaRepository.save(personaFisica);
 
         CuentaBancaria cuentaBancaria = cuentaBancariaRepository.findByPersonaFisicaId(id)
-                .orElseThrow(() -> new RuntimeException("Cuenta bancaria no encontrada"));
+                .orElseThrow(() -> new ValidationException(CODIGO_VALIDACION, "Cuenta bancaria no encontrada para el cliente con ID: " + id));
 
         return mapToResponse(personaFisica, cuentaBancaria);
     }
@@ -247,13 +250,13 @@ public class ClienteServiceImpl implements ClienteService {
         log.info("{} login del cliente con ID: {}", bloqueado ? "Bloqueando" : "Desbloqueando", id);
 
         PersonaFisica personaFisica = personaFisicaRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Cliente no encontrado con ID: " + id));
+                .orElseThrow(() -> new ValidationException(CODIGO_VALIDACION, "Cliente no encontrado con ID: " + id));
 
         personaFisica.setLoginBloqueado(bloqueado);
         personaFisica = personaFisicaRepository.save(personaFisica);
 
         CuentaBancaria cuentaBancaria = cuentaBancariaRepository.findByPersonaFisicaId(id)
-                .orElseThrow(() -> new RuntimeException("Cuenta bancaria no encontrada"));
+                .orElseThrow(() -> new ValidationException(CODIGO_VALIDACION, "Cuenta bancaria no encontrada para el cliente con ID: " + id));
 
         return mapToResponse(personaFisica, cuentaBancaria);
     }

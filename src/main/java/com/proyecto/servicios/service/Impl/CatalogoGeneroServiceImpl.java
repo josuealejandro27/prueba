@@ -1,6 +1,7 @@
 package com.proyecto.servicios.service.Impl;
 
 import com.proyecto.servicios.entity.catalogos.CatalogoGeneros;
+import com.proyecto.servicios.exception.ValidationException;
 import com.proyecto.servicios.repositorys.catalogos.CatalogoGenerosRepository;
 import com.proyecto.servicios.service.CatalogoGeneroService;
 import lombok.extern.slf4j.Slf4j;
@@ -12,6 +13,8 @@ import java.util.List;
 @Service
 @Slf4j
 public class CatalogoGeneroServiceImpl implements CatalogoGeneroService {
+
+    private static final String CODIGO_VALIDACION = "VALIDATION_ERROR";
 
     @Autowired
     private CatalogoGenerosRepository catalogoGenerosRepository;
@@ -26,7 +29,7 @@ public class CatalogoGeneroServiceImpl implements CatalogoGeneroService {
     public CatalogoGeneros obtenerPorId(Long id) {
         log.info("Consultando género con id: {}", id);
         return catalogoGenerosRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Género no encontrado con id: " + id));
+                .orElseThrow(() -> new ValidationException(CODIGO_VALIDACION, "Género no encontrado con id: " + id));
     }
 
     @Override
@@ -39,7 +42,7 @@ public class CatalogoGeneroServiceImpl implements CatalogoGeneroService {
     public CatalogoGeneros actualizar(Long id, CatalogoGeneros catalogoGeneros) {
         log.info("Actualizando género con id: {}", id);
         CatalogoGeneros existente = catalogoGenerosRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Género no encontrado con id: " + id));
+                .orElseThrow(() -> new ValidationException(CODIGO_VALIDACION, "Género no encontrado con id: " + id));
         existente.setTipo(catalogoGeneros.getTipo());
         return catalogoGenerosRepository.save(existente);
     }
@@ -48,7 +51,7 @@ public class CatalogoGeneroServiceImpl implements CatalogoGeneroService {
     public void eliminar(Long id) {
         log.info("Eliminando género con id: {}", id);
         CatalogoGeneros existente = catalogoGenerosRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Género no encontrado con id: " + id));
+                .orElseThrow(() -> new ValidationException(CODIGO_VALIDACION, "Género no encontrado con id: " + id));
         catalogoGenerosRepository.delete(existente);
     }
 }
