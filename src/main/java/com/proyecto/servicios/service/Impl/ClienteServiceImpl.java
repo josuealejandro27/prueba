@@ -14,6 +14,7 @@ import com.proyecto.servicios.repositorys.clientes.UsuarioRepository;
 import com.proyecto.servicios.service.ClienteService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,6 +24,7 @@ import java.time.Period;
 import java.time.ZoneId;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -32,6 +34,10 @@ public class ClienteServiceImpl implements ClienteService {
 
     private static final String CODIGO_VALIDACION = "VALIDATION_ERROR";
     private static final String CODIGO_CLIENTE = "CLIENTE_ERROR";
+
+    private static final String ESTATUS_ACTIVA = "ACTIVA";
+    private static final String ESTATUS_BLOQUEADA = "BLOQUEADA";
+    private static final String ESTATUS_CANCELADA = "CANCELADA";
 
     @Autowired
     private PersonaFisicaRepository personaFisicaRepository;
@@ -68,17 +74,17 @@ public class ClienteServiceImpl implements ClienteService {
 
         // Validar que no exista otro cliente con la misma CURP
         if (personaFisicaRepository.existsByCurp(curpNormalizada)) {
-            throw new ClienteException(CODIGO_CLIENTE, "Ya existe un cliente con la CURP: " + curpNormalizada);
+            throw new ClienteException(CODIGO_CLIENTE, "Ya existe un cliente con la CURP: " + curpNormalizada, HttpStatus.CONFLICT);
         }
 
         // Validar que no exista otro cliente con el mismo RFC
         if (personaFisicaRepository.existsByRfc(rfcNormalizado)) {
-            throw new ClienteException(CODIGO_CLIENTE, "Ya existe un cliente con el RFC: " + rfcNormalizado);
+            throw new ClienteException(CODIGO_CLIENTE, "Ya existe un cliente con el RFC: " + rfcNormalizado, HttpStatus.CONFLICT);
         }
 
         // Validar que no exista otro cliente con el mismo correo
         if (personaFisicaRepository.existsByCorreo(request.getCorreo())) {
-            throw new ClienteException(CODIGO_CLIENTE, "Ya existe un cliente con el correo: " + request.getCorreo());
+            throw new ClienteException(CODIGO_CLIENTE, "Ya existe un cliente con el correo: " + request.getCorreo(), HttpStatus.CONFLICT);
         }
 
         // Crear PersonaFísica
@@ -127,6 +133,7 @@ public class ClienteServiceImpl implements ClienteService {
         infoLaboral.setOcupacion(request.getOcupacion());
         infoLaboral.setEmpresa(request.getEmpresa());
         infoLaboral.setIngresoMensual(request.getIngresoMensual());
+        infoLaboral.setNumeroTelefono(request.getNumeroTelefono());
         personaFisica.setInformacionLaboral(infoLaboral);
 
         // Estado inicial
@@ -142,7 +149,7 @@ public class ClienteServiceImpl implements ClienteService {
         cuentaBancaria.setSaldo(request.getSaldoInicial() != null ? request.getSaldoInicial() : BigDecimal.ZERO);
         cuentaBancaria.setFechaApertura(LocalDateTime.now());
         cuentaBancaria.setPersonaFisica(personaFisica);
-        cuentaBancaria.setEstatus("ACTIVA");
+        cuentaBancaria.setEstatus(ESTATUS_ACTIVA);
         cuentaBancariaRepository.save(cuentaBancaria);
 
         // Crear usuario automáticamente
@@ -163,7 +170,7 @@ public class ClienteServiceImpl implements ClienteService {
         log.info("Actualizando cliente con ID: {}", id);
 
         PersonaFisica personaFisica = personaFisicaRepository.findById(id)
-                .orElseThrow(() -> new ClienteException(CODIGO_CLIENTE, "Cliente no encontrado con ID: " + id));
+                .orElseThrow(() -> new ClienteException(CODIGO_CLIENTE, "Cliente no encontrado con ID: " + id, HttpStatus.NOT_FOUND));
 
         // Actualizar datos personales (no CURP ni RFC)
         if (request.getNombre() != null) {
@@ -201,9 +208,14 @@ public class ClienteServiceImpl implements ClienteService {
         // Actualizar datos de contacto
         if (request.getCorreo() != null && !request.getCorreo().equals(personaFisica.getCorreo())) {
             if (personaFisicaRepository.existsByCorreo(request.getCorreo())) {
-                throw new ClienteException(CODIGO_CLIENTE, "Ya existe un cliente con el correo: " + request.getCorreo());
+                throw new ClienteException(CODIGO_CLIENTE, "Ya existe un cliente con el correo: " + request.getCorreo(), HttpStatus.CONFLICT);
             }
             personaFisica.setCorreo(request.getCorreo());
+            // El correo del cliente es el nombre de usuario: se mantienen sincronizados
+            usuarioRepository.findByClienteId(id).ifPresent(usuario -> {
+                usuario.setCorreo(request.getCorreo());
+                usuarioRepository.save(usuario);
+            });
         }
         if (request.getLada() != null) {
             personaFisica.setLada(request.getLada());
@@ -260,70 +272,61 @@ public class ClienteServiceImpl implements ClienteService {
         if (request.getIngresoMensual() != null) {
             infoLaboral.setIngresoMensual(request.getIngresoMensual());
         }
+        infoLaboral.setNumeroTelefono(personaFisica.getNumeroTelefono());
         personaFisica.setInformacionLaboral(infoLaboral);
 
         personaFisica = personaFisicaRepository.save(personaFisica);
 
-        CuentaBancaria cuentaBancaria = cuentaBancariaRepository.findByPersonaFisicaId(id)
-                .orElseThrow(() -> new ValidationException(CODIGO_VALIDACION, "Cuenta bancaria no encontrada"));
-
         log.info("Cliente actualizado exitosamente");
-        return mapToResponse(personaFisica, cuentaBancaria);
+        return mapToResponse(personaFisica, obtenerCuentaPrincipal(id));
     }
 
     @Override
+    @Transactional(readOnly = true)
     public ClienteResponse obtenerCliente(Long id) {
         log.info("Consultando cliente con ID: {}", id);
 
         PersonaFisica personaFisica = personaFisicaRepository.findById(id)
-                .orElseThrow(() -> new ClienteException(CODIGO_CLIENTE, "Cliente no encontrado con ID: " + id));
+                .orElseThrow(() -> new ClienteException(CODIGO_CLIENTE, "Cliente no encontrado con ID: " + id, HttpStatus.NOT_FOUND));
 
-        CuentaBancaria cuentaBancaria = cuentaBancariaRepository.findByPersonaFisicaId(id)
-                .orElseThrow(() -> new ValidationException(CODIGO_VALIDACION, "Cuenta bancaria no encontrada"));
-
-        return mapToResponse(personaFisica, cuentaBancaria);
+        return mapToResponse(personaFisica, obtenerCuentaPrincipal(id));
     }
 
     @Override
+    @Transactional(readOnly = true)
     public ClienteResponse obtenerClientePorCurp(String curp) {
         log.info("Consultando cliente con CURP: {}", curp);
 
         PersonaFisica personaFisica = personaFisicaRepository.findByCurp(curp)
-                .orElseThrow(() -> new ClienteException(CODIGO_CLIENTE, "Cliente no encontrado con CURP: " + curp));
+                .orElseThrow(() -> new ClienteException(CODIGO_CLIENTE, "Cliente no encontrado con CURP: " + curp, HttpStatus.NOT_FOUND));
 
-        CuentaBancaria cuentaBancaria = cuentaBancariaRepository.findByPersonaFisicaId(personaFisica.getId())
-                .orElseThrow(() -> new ValidationException(CODIGO_VALIDACION, "Cuenta bancaria no encontrada"));
-
-        return mapToResponse(personaFisica, cuentaBancaria);
+        return mapToResponse(personaFisica, obtenerCuentaPrincipal(personaFisica.getId()));
     }
 
     @Override
+    @Transactional(readOnly = true)
     public ClienteResponse obtenerClientePorRfc(String rfc) {
         log.info("Consultando cliente con RFC: {}", rfc);
 
         PersonaFisica personaFisica = personaFisicaRepository.findByRfc(rfc)
-                .orElseThrow(() -> new ClienteException(CODIGO_CLIENTE, "Cliente no encontrado con RFC: " + rfc));
+                .orElseThrow(() -> new ClienteException(CODIGO_CLIENTE, "Cliente no encontrado con RFC: " + rfc, HttpStatus.NOT_FOUND));
 
-        CuentaBancaria cuentaBancaria = cuentaBancariaRepository.findByPersonaFisicaId(personaFisica.getId())
-                .orElseThrow(() -> new ValidationException(CODIGO_VALIDACION, "Cuenta bancaria no encontrada"));
-
-        return mapToResponse(personaFisica, cuentaBancaria);
+        return mapToResponse(personaFisica, obtenerCuentaPrincipal(personaFisica.getId()));
     }
 
     @Override
+    @Transactional(readOnly = true)
     public ClienteResponse obtenerClientePorCorreo(String correo) {
         log.info("Consultando cliente con correo: {}", correo);
 
         PersonaFisica personaFisica = personaFisicaRepository.findByCorreo(correo)
-                .orElseThrow(() -> new ClienteException(CODIGO_CLIENTE, "Cliente no encontrado con correo: " + correo));
+                .orElseThrow(() -> new ClienteException(CODIGO_CLIENTE, "Cliente no encontrado con correo: " + correo, HttpStatus.NOT_FOUND));
 
-        CuentaBancaria cuentaBancaria = cuentaBancariaRepository.findByPersonaFisicaId(personaFisica.getId())
-                .orElseThrow(() -> new ValidationException(CODIGO_VALIDACION, "Cuenta bancaria no encontrada"));
-
-        return mapToResponse(personaFisica, cuentaBancaria);
+        return mapToResponse(personaFisica, obtenerCuentaPrincipal(personaFisica.getId()));
     }
 
     @Override
+    @Transactional(readOnly = true)
     public ClienteResponse obtenerClientePorNumeroCuenta(String numeroCuenta) {
         log.info("Consultando cliente con número de cuenta: {}", numeroCuenta);
 
@@ -331,99 +334,51 @@ public class ClienteServiceImpl implements ClienteService {
                 .orElseThrow(() -> new ValidationException(CODIGO_VALIDACION, "Cuenta bancaria no encontrada con número: " + numeroCuenta));
 
         PersonaFisica personaFisica = personaFisicaRepository.findById(cuentaBancaria.getPersonaFisica().getId())
-                .orElseThrow(() -> new ClienteException(CODIGO_CLIENTE, "Cliente no encontrado para la cuenta"));
+                .orElseThrow(() -> new ClienteException(CODIGO_CLIENTE, "Cliente no encontrado para la cuenta", HttpStatus.NOT_FOUND));
 
         return mapToResponse(personaFisica, cuentaBancaria);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<ClienteResponse> obtenerTodos() {
         log.info("Consultando todos los clientes");
-
-        List<PersonaFisica> personas = personaFisicaRepository.findAll();
-
-        return personas.stream()
-                .map(persona -> {
-                    CuentaBancaria cuenta = cuentaBancariaRepository.findByPersonaFisicaId(persona.getId())
-                            .orElse(null);
-                    return mapToResponse(persona, cuenta);
-                })
-                .collect(Collectors.toList());
+        return mapList(personaFisicaRepository.findAll());
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<ClienteResponse> obtenerClientesActivos() {
         log.info("Consultando clientes activos");
-
-        List<PersonaFisica> personas = personaFisicaRepository.findByActivoTrue();
-
-        return personas.stream()
-                .map(persona -> {
-                    CuentaBancaria cuenta = cuentaBancariaRepository.findByPersonaFisicaId(persona.getId())
-                            .orElse(null);
-                    return mapToResponse(persona, cuenta);
-                })
-                .collect(Collectors.toList());
+        return mapList(personaFisicaRepository.findByActivoTrue());
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<ClienteResponse> buscarPorNombre(String nombre) {
         log.info("Buscando clientes por nombre: {}", nombre);
-
-        List<PersonaFisica> personas = personaFisicaRepository.findByNombreContainingIgnoreCase(nombre);
-
-        return personas.stream()
-                .map(persona -> {
-                    CuentaBancaria cuenta = cuentaBancariaRepository.findByPersonaFisicaId(persona.getId())
-                            .orElse(null);
-                    return mapToResponse(persona, cuenta);
-                })
-                .collect(Collectors.toList());
+        return mapList(personaFisicaRepository.findByNombreContainingIgnoreCase(nombre));
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<ClienteResponse> buscarPorApellidoPaterno(String apellidoPaterno) {
         log.info("Buscando clientes por apellido paterno: {}", apellidoPaterno);
-
-        List<PersonaFisica> personas = personaFisicaRepository.findByApellidoPaternoContainingIgnoreCase(apellidoPaterno);
-
-        return personas.stream()
-                .map(persona -> {
-                    CuentaBancaria cuenta = cuentaBancariaRepository.findByPersonaFisicaId(persona.getId())
-                            .orElse(null);
-                    return mapToResponse(persona, cuenta);
-                })
-                .collect(Collectors.toList());
+        return mapList(personaFisicaRepository.findByApellidoPaternoContainingIgnoreCase(apellidoPaterno));
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<ClienteResponse> buscarPorApellidoMaterno(String apellidoMaterno) {
         log.info("Buscando clientes por apellido materno: {}", apellidoMaterno);
-
-        List<PersonaFisica> personas = personaFisicaRepository.findByApellidoMaternoContainingIgnoreCase(apellidoMaterno);
-
-        return personas.stream()
-                .map(persona -> {
-                    CuentaBancaria cuenta = cuentaBancariaRepository.findByPersonaFisicaId(persona.getId())
-                            .orElse(null);
-                    return mapToResponse(persona, cuenta);
-                })
-                .collect(Collectors.toList());
+        return mapList(personaFisicaRepository.findByApellidoMaternoContainingIgnoreCase(apellidoMaterno));
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<ClienteResponse> obtenerClientesPorRangoFechas(Date fechaInicio, Date fechaFin) {
         log.info("Consultando clientes entre {} y {}", fechaInicio, fechaFin);
-
-        List<PersonaFisica> personas = personaFisicaRepository.findByFechaCreacionBetween(fechaInicio, fechaFin);
-
-        return personas.stream()
-                .map(persona -> {
-                    CuentaBancaria cuenta = cuentaBancariaRepository.findByPersonaFisicaId(persona.getId())
-                            .orElse(null);
-                    return mapToResponse(persona, cuenta);
-                })
-                .collect(Collectors.toList());
+        return mapList(personaFisicaRepository.findByFechaCreacionBetween(fechaInicio, fechaFin));
     }
 
     @Override
@@ -432,16 +387,14 @@ public class ClienteServiceImpl implements ClienteService {
         log.info("{} cuenta del cliente con ID: {}", bloqueado ? "Bloqueando" : "Desbloqueando", id);
 
         PersonaFisica personaFisica = personaFisicaRepository.findById(id)
-                .orElseThrow(() -> new ClienteException(CODIGO_CLIENTE, "Cliente no encontrado con ID: " + id));
+                .orElseThrow(() -> new ClienteException(CODIGO_CLIENTE, "Cliente no encontrado con ID: " + id, HttpStatus.NOT_FOUND));
 
         personaFisica.setCuentaBloqueada(bloqueado);
         personaFisica = personaFisicaRepository.save(personaFisica);
 
         // Actualizar estatus de la cuenta
-        CuentaBancaria cuentaBancaria = cuentaBancariaRepository.findByPersonaFisicaId(id)
-                .orElseThrow(() -> new ValidationException(CODIGO_VALIDACION, "Cuenta bancaria no encontrada"));
-
-        cuentaBancaria.setEstatus(bloqueado ? "BLOQUEADA" : "ACTIVA");
+        CuentaBancaria cuentaBancaria = obtenerCuentaPrincipal(id);
+        cuentaBancaria.setEstatus(bloqueado ? ESTATUS_BLOQUEADA : ESTATUS_ACTIVA);
         cuentaBancariaRepository.save(cuentaBancaria);
 
         return mapToResponse(personaFisica, cuentaBancaria);
@@ -453,15 +406,12 @@ public class ClienteServiceImpl implements ClienteService {
         log.info("{} login del cliente con ID: {}", bloqueado ? "Bloqueando" : "Desbloqueando", id);
 
         PersonaFisica personaFisica = personaFisicaRepository.findById(id)
-                .orElseThrow(() -> new ClienteException(CODIGO_CLIENTE, "Cliente no encontrado con ID: " + id));
+                .orElseThrow(() -> new ClienteException(CODIGO_CLIENTE, "Cliente no encontrado con ID: " + id, HttpStatus.NOT_FOUND));
 
         personaFisica.setLoginBloqueado(bloqueado);
         personaFisica = personaFisicaRepository.save(personaFisica);
 
-        CuentaBancaria cuentaBancaria = cuentaBancariaRepository.findByPersonaFisicaId(id)
-                .orElseThrow(() -> new ValidationException(CODIGO_VALIDACION, "Cuenta bancaria no encontrada"));
-
-        return mapToResponse(personaFisica, cuentaBancaria);
+        return mapToResponse(personaFisica, obtenerCuentaPrincipal(id));
     }
 
     @Override
@@ -470,18 +420,15 @@ public class ClienteServiceImpl implements ClienteService {
         log.info("Desactivando cliente con ID: {}", id);
 
         PersonaFisica personaFisica = personaFisicaRepository.findById(id)
-                .orElseThrow(() -> new ClienteException(CODIGO_CLIENTE, "Cliente no encontrado con ID: " + id));
+                .orElseThrow(() -> new ClienteException(CODIGO_CLIENTE, "Cliente no encontrado con ID: " + id, HttpStatus.NOT_FOUND));
 
         personaFisica.setActivo(false);
         personaFisica = personaFisicaRepository.save(personaFisica);
 
-        // Cancelar todas las cuentas asociadas
-        List<CuentaBancaria> cuentas = cuentaBancariaRepository.findByPersonaFisicaId(id)
-                .map(List::of)
-                .orElse(List.of());
-        
+        // Cancelar todas las cuentas asociadas (relación 1:N)
+        List<CuentaBancaria> cuentas = cuentaBancariaRepository.findByPersonaFisicaId(id);
         for (CuentaBancaria cuenta : cuentas) {
-            cuenta.setEstatus("CANCELADA");
+            cuenta.setEstatus(ESTATUS_CANCELADA);
             cuentaBancariaRepository.save(cuenta);
         }
 
@@ -491,10 +438,8 @@ public class ClienteServiceImpl implements ClienteService {
             usuarioRepository.save(usuario);
         });
 
-        CuentaBancaria cuentaBancaria = cuentas.isEmpty() ? null : cuentas.get(0);
-
         log.info("Cliente desactivado exitosamente");
-        return mapToResponse(personaFisica, cuentaBancaria);
+        return mapToResponse(personaFisica, cuentas.isEmpty() ? null : cuentas.get(0));
     }
 
     @Override
@@ -503,17 +448,21 @@ public class ClienteServiceImpl implements ClienteService {
         log.info("Activando cliente con ID: {}", id);
 
         PersonaFisica personaFisica = personaFisicaRepository.findById(id)
-                .orElseThrow(() -> new ClienteException(CODIGO_CLIENTE, "Cliente no encontrado con ID: " + id));
+                .orElseThrow(() -> new ClienteException(CODIGO_CLIENTE, "Cliente no encontrado con ID: " + id, HttpStatus.NOT_FOUND));
 
         personaFisica.setActivo(true);
         personaFisica = personaFisicaRepository.save(personaFisica);
 
-        // Activar la cuenta asociada
-        CuentaBancaria cuentaBancaria = cuentaBancariaRepository.findByPersonaFisicaId(id)
-                .orElseThrow(() -> new ValidationException(CODIGO_VALIDACION, "Cuenta bancaria no encontrada"));
-
-        cuentaBancaria.setEstatus("ACTIVA");
+        // Reactivar la cuenta principal asociada
+        CuentaBancaria cuentaBancaria = obtenerCuentaPrincipal(id);
+        cuentaBancaria.setEstatus(ESTATUS_ACTIVA);
         cuentaBancariaRepository.save(cuentaBancaria);
+
+        // Reactivar el usuario asociado (coherente con la baja lógica)
+        usuarioRepository.findByClienteId(id).ifPresent(usuario -> {
+            usuario.setActivo(true);
+            usuarioRepository.save(usuario);
+        });
 
         log.info("Cliente activado exitosamente");
         return mapToResponse(personaFisica, cuentaBancaria);
@@ -530,7 +479,7 @@ public class ClienteServiceImpl implements ClienteService {
         }
 
         int edad = Period.between(
-                fechaNacimiento.toInstant().atZone(ZoneId.systemDefault()).toLocalDate(),
+                new Date(fechaNacimiento.getTime()).toInstant().atZone(ZoneId.systemDefault()).toLocalDate(),
                 hoy.toInstant().atZone(ZoneId.systemDefault()).toLocalDate()
         ).getYears();
 
@@ -541,6 +490,42 @@ public class ClienteServiceImpl implements ClienteService {
 
     private String generarNumeroCuenta() {
         return UUID.randomUUID().toString().replace("-", "").substring(0, 16).toUpperCase();
+    }
+
+    /**
+     * Obtiene la cuenta principal (preferentemente ACTIVA) de un cliente.
+     */
+    private CuentaBancaria obtenerCuentaPrincipal(Long personaFisicaId) {
+        List<CuentaBancaria> cuentas = cuentaBancariaRepository.findByPersonaFisicaId(personaFisicaId);
+        if (cuentas.isEmpty()) {
+            throw new ValidationException(CODIGO_VALIDACION, "Cuenta bancaria no encontrada");
+        }
+        return elegirCuentaPrincipal(cuentas);
+    }
+
+    private static CuentaBancaria elegirCuentaPrincipal(List<CuentaBancaria> cuentas) {
+        return cuentas.stream()
+                .filter(c -> ESTATUS_ACTIVA.equals(c.getEstatus()))
+                .findFirst()
+                .orElse(cuentas.get(0));
+    }
+
+    /**
+     * Mapea una lista de clientes resolviendo sus cuentas en una sola consulta (evita N+1).
+     */
+    private List<ClienteResponse> mapList(List<PersonaFisica> personas) {
+        if (personas.isEmpty()) {
+            return List.of();
+        }
+        List<Long> ids = personas.stream().map(PersonaFisica::getId).collect(Collectors.toList());
+        Map<Long, CuentaBancaria> cuentasPorCliente = cuentaBancariaRepository.findByPersonaFisicaIdIn(ids).stream()
+                .collect(Collectors.groupingBy(
+                        c -> c.getPersonaFisica().getId(),
+                        Collectors.collectingAndThen(Collectors.toList(), ClienteServiceImpl::elegirCuentaPrincipal)));
+
+        return personas.stream()
+                .map(persona -> mapToResponse(persona, cuentasPorCliente.get(persona.getId())))
+                .collect(Collectors.toList());
     }
 
     private ClienteResponse mapToResponse(PersonaFisica persona, CuentaBancaria cuenta) {
