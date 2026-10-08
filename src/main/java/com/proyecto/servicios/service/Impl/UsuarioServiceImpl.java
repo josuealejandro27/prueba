@@ -10,6 +10,7 @@ import com.proyecto.servicios.repositorys.clientes.UsuarioRepository;
 import com.proyecto.servicios.service.UsuarioService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -39,36 +40,40 @@ public class UsuarioServiceImpl implements UsuarioService {
     private PasswordEncoder passwordEncoder;
 
     @Override
+    @Transactional(readOnly = true)
     public UsuarioResponse obtenerUsuario(Long id) {
         log.info("Consultando usuario con ID: {}", id);
 
         Usuario usuario = usuarioRepository.findById(id)
-                .orElseThrow(() -> new UsuarioException(CODIGO_USUARIO, "Usuario no encontrado con ID: " + id));
+                .orElseThrow(() -> new UsuarioException(CODIGO_USUARIO, "Usuario no encontrado con ID: " + id, HttpStatus.NOT_FOUND));
 
         return mapToResponse(usuario);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public UsuarioResponse obtenerUsuarioPorCorreo(String correo) {
         log.info("Consultando usuario con correo: {}", correo);
 
         Usuario usuario = usuarioRepository.findByCorreo(correo)
-                .orElseThrow(() -> new UsuarioException(CODIGO_USUARIO, "Usuario no encontrado con correo: " + correo));
+                .orElseThrow(() -> new UsuarioException(CODIGO_USUARIO, "Usuario no encontrado con correo: " + correo, HttpStatus.NOT_FOUND));
 
         return mapToResponse(usuario);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public UsuarioResponse obtenerUsuarioPorClienteId(Long clienteId) {
         log.info("Consultando usuario del cliente con ID: {}", clienteId);
 
         Usuario usuario = usuarioRepository.findByClienteId(clienteId)
-                .orElseThrow(() -> new UsuarioException(CODIGO_USUARIO, "Usuario no encontrado para el cliente con ID: " + clienteId));
+                .orElseThrow(() -> new UsuarioException(CODIGO_USUARIO, "Usuario no encontrado para el cliente con ID: " + clienteId, HttpStatus.NOT_FOUND));
 
         return mapToResponse(usuario);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<UsuarioResponse> obtenerTodos() {
         log.info("Consultando todos los usuarios");
 
@@ -78,21 +83,21 @@ public class UsuarioServiceImpl implements UsuarioService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<UsuarioResponse> obtenerUsuariosActivos() {
         log.info("Consultando usuarios activos");
 
-        return usuarioRepository.findAll().stream()
-                .filter(Usuario::isActivo)
+        return usuarioRepository.findByActivoTrue().stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<UsuarioResponse> buscarPorCorreo(String correo) {
         log.info("Buscando usuarios por correo: {}", correo);
 
-        return usuarioRepository.findAll().stream()
-                .filter(u -> u.getCorreo().toLowerCase().contains(correo.toLowerCase()))
+        return usuarioRepository.findByCorreoContainingIgnoreCase(correo).stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
     }
@@ -108,12 +113,12 @@ public class UsuarioServiceImpl implements UsuarioService {
 
         // Validar que no exista otro usuario con el mismo correo
         if (usuarioRepository.existsByCorreo(correo)) {
-            throw new UsuarioException(CODIGO_USUARIO, "Ya existe un usuario con el correo: " + correo);
+            throw new UsuarioException(CODIGO_USUARIO, "Ya existe un usuario con el correo: " + correo, HttpStatus.CONFLICT);
         }
 
         // Validar que el cliente no tenga ya un usuario
         if (usuarioRepository.existsByClienteId(clienteId)) {
-            throw new UsuarioException(CODIGO_USUARIO, "El cliente ya tiene un usuario asociado");
+            throw new UsuarioException(CODIGO_USUARIO, "El cliente ya tiene un usuario asociado", HttpStatus.CONFLICT);
         }
 
         // Validar formato de contraseña
@@ -138,11 +143,11 @@ public class UsuarioServiceImpl implements UsuarioService {
         log.info("Actualizando usuario con ID: {}", id);
 
         Usuario usuario = usuarioRepository.findById(id)
-                .orElseThrow(() -> new UsuarioException(CODIGO_USUARIO, "Usuario no encontrado con ID: " + id));
+                .orElseThrow(() -> new UsuarioException(CODIGO_USUARIO, "Usuario no encontrado con ID: " + id, HttpStatus.NOT_FOUND));
 
         if (correo != null && !correo.equals(usuario.getCorreo())) {
             if (usuarioRepository.existsByCorreo(correo)) {
-                throw new UsuarioException(CODIGO_USUARIO, "Ya existe un usuario con el correo: " + correo);
+                throw new UsuarioException(CODIGO_USUARIO, "Ya existe un usuario con el correo: " + correo, HttpStatus.CONFLICT);
             }
             usuario.setCorreo(correo);
         }
@@ -164,7 +169,7 @@ public class UsuarioServiceImpl implements UsuarioService {
         log.info("Desactivando usuario con ID: {}", id);
 
         Usuario usuario = usuarioRepository.findById(id)
-                .orElseThrow(() -> new UsuarioException(CODIGO_USUARIO, "Usuario no encontrado con ID: " + id));
+                .orElseThrow(() -> new UsuarioException(CODIGO_USUARIO, "Usuario no encontrado con ID: " + id, HttpStatus.NOT_FOUND));
 
         usuario.setActivo(false);
         usuario = usuarioRepository.save(usuario);
@@ -179,7 +184,7 @@ public class UsuarioServiceImpl implements UsuarioService {
         log.info("Activando usuario con ID: {}", id);
 
         Usuario usuario = usuarioRepository.findById(id)
-                .orElseThrow(() -> new UsuarioException(CODIGO_USUARIO, "Usuario no encontrado con ID: " + id));
+                .orElseThrow(() -> new UsuarioException(CODIGO_USUARIO, "Usuario no encontrado con ID: " + id, HttpStatus.NOT_FOUND));
 
         usuario.setActivo(true);
         usuario = usuarioRepository.save(usuario);
