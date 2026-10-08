@@ -5,8 +5,14 @@ import com.proyecto.servicios.model.ApiResponse;
 import feign.FeignException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataAccessResourceFailureException;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -37,7 +43,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(ClienteException.class)
     public ResponseEntity<ApiResponse<Void>> manejarClienteException(ClienteException ex) {
         log.error("ClienteException [{}] - {}", ex.getCode(), ex.getMessage());
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+        return ResponseEntity.status(ex.getHttpStatus())
                 .body(ApiResponse.<Void>builder()
                         .code(ex.getCode())
                         .message(ex.getMessage())
@@ -49,7 +55,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(CuentaException.class)
     public ResponseEntity<ApiResponse<Void>> manejarCuentaException(CuentaException ex) {
         log.error("CuentaException [{}] - {}", ex.getCode(), ex.getMessage());
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+        return ResponseEntity.status(ex.getHttpStatus())
                 .body(ApiResponse.<Void>builder()
                         .code(ex.getCode())
                         .message(ex.getMessage())
@@ -61,7 +67,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(UsuarioException.class)
     public ResponseEntity<ApiResponse<Void>> manejarUsuarioException(UsuarioException ex) {
         log.error("UsuarioException [{}] - {}", ex.getCode(), ex.getMessage());
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+        return ResponseEntity.status(ex.getHttpStatus())
                 .body(ApiResponse.<Void>builder()
                         .code(ex.getCode())
                         .message(ex.getMessage())
@@ -130,10 +136,88 @@ public class GlobalExceptionHandler {
         return responder(ApiResponseEnum.ERROR_COMUNICACION);
     }
 
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ApiResponse<Void>> manejarIntegridad(DataIntegrityViolationException ex) {
+        log.error("Violación de integridad de datos: {}", ex.getMostSpecificCause().getMessage());
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(ApiResponse.<Void>builder()
+                        .code("CONFLICT")
+                        .message("El recurso ya existe o viola una restricción de integridad")
+                        .timestamp(LocalDateTime.now())
+                        .data(null)
+                        .build());
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ApiResponse<Void>> manejarCuerpoInvalido(HttpMessageNotReadableException ex) {
+        log.error("Cuerpo de la petición inválido: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(ApiResponse.<Void>builder()
+                        .code("BAD_REQUEST")
+                        .message("El cuerpo de la petición es inválido o tiene un formato incorrecto")
+                        .timestamp(LocalDateTime.now())
+                        .data(null)
+                        .build());
+    }
+
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    public ResponseEntity<ApiResponse<Void>> manejarParametroFaltante(MissingServletRequestParameterException ex) {
+        log.error("Parámetro requerido faltante: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(ApiResponse.<Void>builder()
+                        .code("BAD_REQUEST")
+                        .message("Falta el parámetro requerido: " + ex.getParameterName())
+                        .timestamp(LocalDateTime.now())
+                        .data(null)
+                        .build());
+    }
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ApiResponse<Void>> manejarTipoInvalido(MethodArgumentTypeMismatchException ex) {
+        log.error("Tipo de parámetro inválido: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(ApiResponse.<Void>builder()
+                        .code("BAD_REQUEST")
+                        .message("El valor del parámetro '" + ex.getName() + "' no es válido")
+                        .timestamp(LocalDateTime.now())
+                        .data(null)
+                        .build());
+    }
+
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<ApiResponse<Void>> manejarMetodoNoSoportado(HttpRequestMethodNotSupportedException ex) {
+        log.error("Método HTTP no soportado: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED)
+                .body(ApiResponse.<Void>builder()
+                        .code("METHOD_NOT_ALLOWED")
+                        .message("Método HTTP no soportado para este recurso")
+                        .timestamp(LocalDateTime.now())
+                        .data(null)
+                        .build());
+    }
+
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<ApiResponse<Void>> manejarRecursoNoEncontrado(NoResourceFoundException ex) {
+        log.error("Recurso no encontrado: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(ApiResponse.<Void>builder()
+                        .code("NOT_FOUND")
+                        .message("Recurso no encontrado: " + ex.getResourcePath())
+                        .timestamp(LocalDateTime.now())
+                        .data(null)
+                        .build());
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> manejarExceptionGenerica(Exception ex) {
-        log.error("Error no controlado al consultar el catálogo: {}", ex.getMessage(), ex);
-        return responder(ApiResponseEnum.ERROR_INTERNO);
+        log.error("Error no controlado: {}", ex.getMessage(), ex);
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(ApiResponse.<Void>builder()
+                        .code("ERROR_INTERNO")
+                        .message("Ocurrió un error interno en el servidor")
+                        .timestamp(LocalDateTime.now())
+                        .data(null)
+                        .build());
     }
 
     @ExceptionHandler(org.springframework.security.access.AccessDeniedException.class)
