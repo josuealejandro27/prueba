@@ -46,19 +46,36 @@ public class ConfigDB {
             config.setJdbcUrl(env.getProperty("spring.datasource.url"));
             config.setPassword(env.getProperty("spring.datasource.password"));
             config.setUsername(env.getProperty("spring.datasource.username"));
-            config.setMaximumPoolSize(10);
-            config.setMaxLifetime(18800);
-            config.setConnectionTimeout(5000);
-            config.setValidationTimeout(5000);
-            config.setMinimumIdle(2);
+            config.setMaximumPoolSize(intProp("spring.datasource.hikari.maximum-pool-size", 10));
+            config.setMinimumIdle(intProp("spring.datasource.hikari.minimum-idle", 2));
+            config.setMaxLifetime(longProp("spring.datasource.hikari.max-lifetime", 60000));
+            config.setConnectionTimeout(longProp("spring.datasource.hikari.connection-timeout", 5000));
+            config.setValidationTimeout(longProp("spring.datasource.hikari.validation-timeout", 5000));
+            config.setIdleTimeout(longProp("spring.datasource.hikari.idle-timeout", 600000));
+            config.setKeepaliveTime(longProp("spring.datasource.hikari.keepalive-time", 20000));
             config.setConnectionTestQuery("SELECT 1");
             config.setPoolName("sfDatasource");
+            // Supabase usa pgbouncer en modo transaction: los prepared statements
+            // servidor (S_1, S_2...) entran en conflicto entre clientes (SQL 42P05).
+            // Se desactivan para evitar el error al validar/ejecutar consultas.
+            config.addDataSourceProperty("prepareThreshold", "0");
+            config.addDataSourceProperty("preparedStatementCacheQueries", "0");
 
         }catch (Exception e){
             log.error("Ha ocurrido un error en la conexcion a base de datos, a causa de:",e);
             return null;
         }
         return new HikariDataSource(config);
+    }
+
+    private int intProp(String key, int fallback) {
+        String v = env.getProperty(key);
+        return v != null ? Integer.parseInt(v) : fallback;
+    }
+
+    private long longProp(String key, long fallback) {
+        String v = env.getProperty(key);
+        return v != null ? Long.parseLong(v) : fallback;
     }
 
     @Bean(name="sfEntityManagerFactory")
