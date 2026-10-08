@@ -12,7 +12,9 @@ public interface CuentaBancariaRepository extends JpaRepository<CuentaBancaria, 
 
     Optional<CuentaBancaria> findByNumeroCuenta(String numeroCuenta);
 
-    Optional<CuentaBancaria> findByPersonaFisicaId(Long personaFisicaId);
+    boolean existsByNumeroCuenta(String numeroCuenta);
+
+    List<CuentaBancaria> findByPersonaFisicaId(Long personaFisicaId);
 
     List<CuentaBancaria> findByPersonaFisicaIdIn(List<Long> personaFisicaIds);
 
