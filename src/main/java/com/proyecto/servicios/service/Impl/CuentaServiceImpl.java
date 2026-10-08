@@ -11,6 +11,7 @@ import com.proyecto.servicios.repositorys.clientes.PersonaFisicaRepository;
 import com.proyecto.servicios.service.CuentaService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,6 +27,7 @@ public class CuentaServiceImpl implements CuentaService {
 
     private static final String CODIGO_VALIDACION = "VALIDATION_ERROR";
     private static final String CODIGO_CUENTA = "CUENTA_ERROR";
+    private static final String ESTATUS_ACTIVA = "ACTIVA";
 
     @Autowired
     private CuentaBancariaRepository cuentaBancariaRepository;
@@ -34,42 +36,42 @@ public class CuentaServiceImpl implements CuentaService {
     private PersonaFisicaRepository personaFisicaRepository;
 
     @Override
+    @Transactional(readOnly = true)
     public CuentaResponse obtenerCuentaPorNumero(String numeroCuenta) {
         log.info("Consultando cuenta con número: {}", numeroCuenta);
 
         CuentaBancaria cuenta = cuentaBancariaRepository.findByNumeroCuenta(numeroCuenta)
-                .orElseThrow(() -> new CuentaException(CODIGO_CUENTA, "Cuenta no encontrada con número: " + numeroCuenta));
+                .orElseThrow(() -> new CuentaException(CODIGO_CUENTA, "Cuenta no encontrada con número: " + numeroCuenta, HttpStatus.NOT_FOUND));
 
         return mapToResponse(cuenta);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<CuentaResponse> obtenerCuentasPorCliente(Long clienteId) {
         log.info("Consultando cuentas del cliente con ID: {}", clienteId);
 
-        return cuentaBancariaRepository.findByPersonaFisicaId(clienteId)
-                .map(cuenta -> List.of(mapToResponse(cuenta)))
-                .orElse(List.of());
-    }
-
-    @Override
-    public List<CuentaResponse> obtenerCuentasPorEstatus(String estatus) {
-        log.info("Consultando cuentas con estatus: {}", estatus);
-
-        List<CuentaBancaria> cuentas = cuentaBancariaRepository.findByEstatus(estatus);
-
-        return cuentas.stream()
+        return cuentaBancariaRepository.findByPersonaFisicaId(clienteId).stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public List<CuentaResponse> obtenerCuentasPorEstatus(String estatus) {
+        log.info("Consultando cuentas con estatus: {}", estatus);
+
+        return cuentaBancariaRepository.findByEstatus(estatus).stream()
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public List<CuentaResponse> obtenerCuentasActivas() {
         log.info("Consultando cuentas activas");
 
-        List<CuentaBancaria> cuentas = cuentaBancariaRepository.findByEstatus("ACTIVA");
-
-        return cuentas.stream()
+        return cuentaBancariaRepository.findByEstatus(ESTATUS_ACTIVA).stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
     }
@@ -80,7 +82,7 @@ public class CuentaServiceImpl implements CuentaService {
         log.info("Actualizando cuenta con número: {}", numeroCuenta);
 
         CuentaBancaria cuenta = cuentaBancariaRepository.findByNumeroCuenta(numeroCuenta)
-                .orElseThrow(() -> new CuentaException(CODIGO_CUENTA, "Cuenta no encontrada con número: " + numeroCuenta));
+                .orElseThrow(() -> new CuentaException(CODIGO_CUENTA, "Cuenta no encontrada con número: " + numeroCuenta, HttpStatus.NOT_FOUND));
 
         if (request.getSaldo() != null) {
             cuenta.setSaldo(request.getSaldo());
@@ -108,8 +110,8 @@ public class CuentaServiceImpl implements CuentaService {
             throw new ValidationException(CODIGO_VALIDACION, "No se puede crear cuenta para un cliente inactivo");
         }
 
-        if (cuentaBancariaRepository.findByPersonaFisicaId(clienteId).isPresent()) {
-            throw new CuentaException(CODIGO_CUENTA, "El cliente ya tiene una cuenta asignada");
+        if (numeroCuenta != null && cuentaBancariaRepository.existsByNumeroCuenta(numeroCuenta)) {
+            throw new CuentaException(CODIGO_CUENTA, "Ya existe una cuenta con el número: " + numeroCuenta, HttpStatus.CONFLICT);
         }
 
         CuentaBancaria cuenta = new CuentaBancaria();
@@ -117,7 +119,7 @@ public class CuentaServiceImpl implements CuentaService {
         cuenta.setSaldo(BigDecimal.ZERO);
         cuenta.setFechaApertura(LocalDateTime.now());
         cuenta.setPersonaFisica(persona);
-        cuenta.setEstatus("ACTIVA");
+        cuenta.setEstatus(ESTATUS_ACTIVA);
 
         cuenta = cuentaBancariaRepository.save(cuenta);
 
