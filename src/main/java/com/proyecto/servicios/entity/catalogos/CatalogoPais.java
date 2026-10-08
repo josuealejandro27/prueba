@@ -7,7 +7,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
-@Table(name = "CatalogoPais")
+@Table(name = "catalogo_pais")
 @Getter
 @Setter
 @AllArgsConstructor
@@ -20,6 +20,7 @@ public class CatalogoPais {
     @Column(nullable = false, length = 100, name = "nombre", columnDefinition = "TEXT")
     private String nombre;
 
-    @Embedded
+    // La tabla catalogo_pais no contiene esta jerarquía; no forma parte del mapeo JPA.
+    @Transient
     private CatalogoEstado catalogoEstado;
 }
