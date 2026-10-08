@@ -15,4 +15,6 @@ public interface CatalogoGeneroService {
     CatalogoGeneros actualizar(Long id, CatalogoGeneros catalogoGeneros);
 
     void eliminar(Long id);
+
+    List<CatalogoGeneros> buscarPorTipo(String tipo);
 }

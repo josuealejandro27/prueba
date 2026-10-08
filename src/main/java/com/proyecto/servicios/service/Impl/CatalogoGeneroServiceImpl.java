@@ -54,4 +54,10 @@ public class CatalogoGeneroServiceImpl implements CatalogoGeneroService {
                 .orElseThrow(() -> new ValidationException(CODIGO_VALIDACION, "Género no encontrado con id: " + id));
         catalogoGenerosRepository.delete(existente);
     }
+
+    @Override
+    public List<CatalogoGeneros> buscarPorTipo(String tipo) {
+        log.info("Buscando géneros por tipo: {}", tipo);
+        return catalogoGenerosRepository.findByTipoContainingIgnoreCase(tipo);
+    }
 }
