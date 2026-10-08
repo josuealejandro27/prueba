@@ -12,8 +12,10 @@ import io.jsonwebtoken.security.Keys;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
@@ -39,21 +41,22 @@ public class AuthServiceImpl implements AuthService {
     private long jwtExpiration;
 
     @Override
+    @Transactional(readOnly = true)
     public LoginResponse login(LoginRequest request) {
         log.info("Intento de login para correo: {}", request.getCorreo());
 
         // Buscar usuario por correo
         Usuario usuario = usuarioRepository.findByCorreo(request.getCorreo())
-                .orElseThrow(() -> new UsuarioException(CODIGO_CREDENCIALES, "Credenciales inválidas"));
+                .orElseThrow(() -> new UsuarioException(CODIGO_CREDENCIALES, "Credenciales inválidas", HttpStatus.UNAUTHORIZED));
 
         // Validar que el usuario esté activo
         if (!usuario.isActivo()) {
-            throw new UsuarioException(CODIGO_USUARIO, "Usuario inactivo");
+            throw new UsuarioException(CODIGO_USUARIO, "Usuario inactivo", HttpStatus.FORBIDDEN);
         }
 
         // Validar contraseña
         if (!passwordEncoder.matches(request.getPassword(), usuario.getPassword())) {
-            throw new UsuarioException(CODIGO_CREDENCIALES, "Credenciales inválidas");
+            throw new UsuarioException(CODIGO_CREDENCIALES, "Credenciales inválidas", HttpStatus.UNAUTHORIZED);
         }
 
         // Generar token JWT
