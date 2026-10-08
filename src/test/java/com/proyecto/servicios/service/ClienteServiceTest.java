@@ -21,6 +21,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import java.lang.reflect.Field;
 import java.math.BigDecimal;
 import java.util.Date;
+import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -77,7 +78,7 @@ class ClienteServiceTest {
         request.setRfc("PEGJ900101");
         request.setCorreo("juan@email.com");
         request.setLada((short) 55);
-        request.setNumeroTelefono(1234567890);
+        request.setNumeroTelefono(1234567890L);
         request.setCalle("Calle 123");
         request.setNoExterior((short) 123);
         request.setColonia("Colonia Centro");
@@ -198,7 +199,7 @@ class ClienteServiceTest {
         usuarioMock.setActivo(true);
         
         when(personaFisicaRepository.findById(1L)).thenReturn(Optional.of(personaFisica));
-        when(cuentaBancariaRepository.findByPersonaFisicaId(1L)).thenReturn(Optional.of(cuentaBancaria));
+        when(cuentaBancariaRepository.findByPersonaFisicaId(1L)).thenReturn(List.of(cuentaBancaria));
         when(usuarioRepository.findByClienteId(1L)).thenReturn(Optional.of(usuarioMock));
         when(personaFisicaRepository.save(any())).thenReturn(personaFisica);
         when(cuentaBancariaRepository.save(any())).thenReturn(cuentaBancaria);
