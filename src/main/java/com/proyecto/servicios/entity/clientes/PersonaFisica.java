@@ -90,18 +90,38 @@ public class PersonaFisica {
     @Min(value = 1000000000, message = "El número de teléfono debe tener exactamente 10 dígitos")
     @Max(value = 9999999999L, message = "El número de teléfono debe tener exactamente 10 dígitos")
     @Column(nullable = false, name = "numero_telefono", length = 10)
-    private Integer numeroTelefono;
+    private Long numeroTelefono;
 
     @Min(value = 1000000000, message = "El número de teléfono alternativo debe tener exactamente 10 dígitos")
     @Max(value = 9999999999L, message = "El número de teléfono alternativo debe tener exactamente 10 dígitos")
     @Column(nullable = true, name = "numero_telefono2", length = 10)
-    private Integer numeroTelefono2;
+    private Long numeroTelefono2;
 
-    @Embedded
+    @OneToOne(mappedBy = "personaFisica", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private Domicilio domicilio;
 
-    @Embedded
+    @OneToOne(mappedBy = "personaFisica", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private InformacionLaboral informacionLaboral;
+
+    public void setDomicilio(Domicilio domicilio) {
+        if (this.domicilio != null && this.domicilio != domicilio) {
+            this.domicilio.setPersonaFisica(null);
+        }
+        this.domicilio = domicilio;
+        if (domicilio != null) {
+            domicilio.setPersonaFisica(this);
+        }
+    }
+
+    public void setInformacionLaboral(InformacionLaboral informacionLaboral) {
+        if (this.informacionLaboral != null && this.informacionLaboral != informacionLaboral) {
+            this.informacionLaboral.setPersonaFisica(null);
+        }
+        this.informacionLaboral = informacionLaboral;
+        if (informacionLaboral != null) {
+            informacionLaboral.setPersonaFisica(this);
+        }
+    }
 
     @Column(nullable = false, name = "cuenta_bloqueada")
     private boolean cuentaBloqueada;

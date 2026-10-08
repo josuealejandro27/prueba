@@ -51,11 +51,11 @@ public class ClienteUpdateRequest {
 
     @Min(value = 1000000000, message = "El número de teléfono debe tener exactamente 10 dígitos")
     @Max(value = 9999999999L, message = "El número de teléfono debe tener exactamente 10 dígitos")
-    private Integer numeroTelefono;
+    private Long numeroTelefono;
 
     @Min(value = 1000000000, message = "El número de teléfono alternativo debe tener exactamente 10 dígitos")
     @Max(value = 9999999999L, message = "El número de teléfono alternativo debe tener exactamente 10 dígitos")
-    private Integer numeroTelefono2;
+    private Long numeroTelefono2;
 
     // Domicilio (modificable)
     @Size(max = 100, message = "La calle no puede tener más de 100 caracteres")

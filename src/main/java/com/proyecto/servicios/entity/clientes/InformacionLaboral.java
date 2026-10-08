@@ -1,7 +1,6 @@
 package com.proyecto.servicios.entity.clientes;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Embeddable;
+import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -10,12 +9,21 @@ import lombok.Setter;
 
 import java.math.BigDecimal;
 
-@Embeddable
+@Entity
+@Table(name = "informacion_laboral")
 @Getter
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
 public class InformacionLaboral {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "persona_fisica_id", nullable = false, unique = true)
+    private PersonaFisica personaFisica;
 
     @NotBlank(message = "La ocupación es obligatoria")
     @Size(max = 100, message = "La ocupación no puede tener más de 100 caracteres")
@@ -37,5 +45,5 @@ public class InformacionLaboral {
     @Min(value = 1000000000, message = "El número de teléfono debe tener exactamente 10 dígitos")
     @Max(value = 9999999999L, message = "El número de teléfono debe tener exactamente 10 dígitos")
     @Column(nullable = false, name = "numero_telefono", length = 10)
-    private Integer numeroTelefono;
+    private Long numeroTelefono;
 }

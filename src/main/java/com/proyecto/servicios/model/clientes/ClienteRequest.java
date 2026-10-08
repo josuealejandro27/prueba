@@ -68,11 +68,11 @@ public class ClienteRequest {
     @NotNull(message = "El número de teléfono es obligatorio")
     @Min(value = 1000000000, message = "El número de teléfono debe tener exactamente 10 dígitos")
     @Max(value = 9999999999L, message = "El número de teléfono debe tener exactamente 10 dígitos")
-    private Integer numeroTelefono;
+    private Long numeroTelefono;
 
     @Min(value = 1000000000, message = "El número de teléfono alternativo debe tener exactamente 10 dígitos")
     @Max(value = 9999999999L, message = "El número de teléfono alternativo debe tener exactamente 10 dígitos")
-    private Integer numeroTelefono2;
+    private Long numeroTelefono2;
 
     // Domicilio
     @NotBlank(message = "La calle es obligatoria")

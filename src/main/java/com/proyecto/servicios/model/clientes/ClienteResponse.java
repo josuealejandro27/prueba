@@ -24,7 +24,7 @@ public class ClienteResponse {
     private String nacionalidad;
     private String estadoCivil;
     private String correo;
-    private Integer numeroTelefono;
+    private Long numeroTelefono;
     private String calle;
     private String colonia;
     private String municipio;

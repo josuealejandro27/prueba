@@ -1,19 +1,27 @@
 package com.proyecto.servicios.entity.clientes;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Embeddable;
+import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-@Embeddable
+@Entity
+@Table(name = "domicilio")
 @Getter
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
 public class Domicilio {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "persona_fisica_id", nullable = false, unique = true)
+    private PersonaFisica personaFisica;
 
     @NotBlank(message = "La calle es obligatoria")
     @Size(max = 100, message = "La calle no puede tener más de 100 caracteres")
