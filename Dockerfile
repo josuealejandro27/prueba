@@ -15,7 +15,7 @@ RUN chown app:app app.jar
 
 USER app
 
-EXPOSE 8080
+EXPOSE 10000
 
 # MaxRAMPercentage: usa como máximo el 70% de la RAM del contenedor
 # UseSerialGC: GC con menor huella de memoria que G1
