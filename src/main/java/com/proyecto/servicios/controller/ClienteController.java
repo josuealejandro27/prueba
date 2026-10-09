@@ -61,7 +61,7 @@ public class ClienteController {
     // Buscar cliente por CURP
     @Operation(summary = "Buscar cliente por CURP")
     @GetMapping(value = "/clientes", params = "curp", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<ApiResponse<ClienteResponse>> obtenerClientePorCurp(@RequestParam String curp) {
+    public ResponseEntity<ApiResponse<ClienteResponse>> obtenerClientePorCurp(@RequestParam(required = false) String curp) {
         ClienteResponse cliente = clienteService.obtenerClientePorCurp(curp);
         return ResponseEntity.ok(ApiResponse.of(ApiResponseEnum.OK, cliente));
     }
@@ -69,7 +69,7 @@ public class ClienteController {
     // Buscar cliente por RFC
     @Operation(summary = "Buscar cliente por RFC")
     @GetMapping(value = "/clientes", params = "rfc", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<ApiResponse<ClienteResponse>> obtenerClientePorRfc(@RequestParam String rfc) {
+    public ResponseEntity<ApiResponse<ClienteResponse>> obtenerClientePorRfc(@RequestParam(required = false) String rfc) {
         ClienteResponse cliente = clienteService.obtenerClientePorRfc(rfc);
         return ResponseEntity.ok(ApiResponse.of(ApiResponseEnum.OK, cliente));
     }
@@ -77,7 +77,7 @@ public class ClienteController {
     // Buscar cliente por correo
     @Operation(summary = "Buscar cliente por correo")
     @GetMapping(value = "/clientes", params = "correo", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<ApiResponse<ClienteResponse>> obtenerClientePorCorreo(@RequestParam String correo) {
+    public ResponseEntity<ApiResponse<ClienteResponse>> obtenerClientePorCorreo(@RequestParam(required = false) String correo) {
         ClienteResponse cliente = clienteService.obtenerClientePorCorreo(correo);
         return ResponseEntity.ok(ApiResponse.of(ApiResponseEnum.OK, cliente));
     }
@@ -85,7 +85,7 @@ public class ClienteController {
     // Buscar cliente por número de cuenta
     @Operation(summary = "Buscar cliente por número de cuenta")
     @GetMapping(value = "/clientes", params = "numeroCuenta", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<ApiResponse<ClienteResponse>> obtenerClientePorNumeroCuenta(@RequestParam String numeroCuenta) {
+    public ResponseEntity<ApiResponse<ClienteResponse>> obtenerClientePorNumeroCuenta(@RequestParam(required = false) String numeroCuenta) {
         ClienteResponse cliente = clienteService.obtenerClientePorNumeroCuenta(numeroCuenta);
         return ResponseEntity.ok(ApiResponse.of(ApiResponseEnum.OK, cliente));
     }
@@ -93,7 +93,7 @@ public class ClienteController {
     // Buscar clientes por nombre
     @Operation(summary = "Buscar clientes por nombre")
     @GetMapping(value = "/clientes", params = "nombre", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<ApiResponse<List<ClienteResponse>>> buscarPorNombre(@RequestParam String nombre) {
+    public ResponseEntity<ApiResponse<List<ClienteResponse>>> buscarPorNombre(@RequestParam(required = false) String nombre) {
         List<ClienteResponse> clientes = clienteService.buscarPorNombre(nombre);
         return ResponseEntity.ok(ApiResponse.of(ApiResponseEnum.OK, clientes));
     }
@@ -101,7 +101,7 @@ public class ClienteController {
     // Buscar clientes por apellido paterno
     @Operation(summary = "Buscar clientes por apellido paterno")
     @GetMapping(value = "/clientes", params = "apellidoPaterno", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<ApiResponse<List<ClienteResponse>>> buscarPorApellidoPaterno(@RequestParam String apellidoPaterno) {
+    public ResponseEntity<ApiResponse<List<ClienteResponse>>> buscarPorApellidoPaterno(@RequestParam(required = false) String apellidoPaterno) {
         List<ClienteResponse> clientes = clienteService.buscarPorApellidoPaterno(apellidoPaterno);
         return ResponseEntity.ok(ApiResponse.of(ApiResponseEnum.OK, clientes));
     }
@@ -109,7 +109,7 @@ public class ClienteController {
     // Buscar clientes por apellido materno
     @Operation(summary = "Buscar clientes por apellido materno")
     @GetMapping(value = "/clientes", params = "apellidoMaterno", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<ApiResponse<List<ClienteResponse>>> buscarPorApellidoMaterno(@RequestParam String apellidoMaterno) {
+    public ResponseEntity<ApiResponse<List<ClienteResponse>>> buscarPorApellidoMaterno(@RequestParam(required = false) String apellidoMaterno) {
         List<ClienteResponse> clientes = clienteService.buscarPorApellidoMaterno(apellidoMaterno);
         return ResponseEntity.ok(ApiResponse.of(ApiResponseEnum.OK, clientes));
     }
@@ -117,7 +117,7 @@ public class ClienteController {
     // Consultar clientes activos
     @Operation(summary = "Consultar clientes activos")
     @GetMapping(value = "/clientes", params = "activos", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<ApiResponse<List<ClienteResponse>>> obtenerClientesActivos(@RequestParam boolean activos) {
+    public ResponseEntity<ApiResponse<List<ClienteResponse>>> obtenerClientesActivos(@RequestParam(required = false) boolean activos) {
         List<ClienteResponse> clientes = clienteService.obtenerClientesActivos();
         return ResponseEntity.ok(ApiResponse.of(ApiResponseEnum.OK, clientes));
     }
@@ -126,8 +126,8 @@ public class ClienteController {
     @Operation(summary = "Consultar clientes por rango de fechas")
     @GetMapping(value = "/clientes", params = {"fechaInicio", "fechaFin"}, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ApiResponse<List<ClienteResponse>>> obtenerClientesPorRangoFechas(
-            @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") Date fechaInicio,
-            @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") Date fechaFin) {
+            @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") Date fechaInicio,
+            @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") Date fechaFin) {
         List<ClienteResponse> clientes = clienteService.obtenerClientesPorRangoFechas(fechaInicio, fechaFin);
         return ResponseEntity.ok(ApiResponse.of(ApiResponseEnum.OK, clientes));
     }
