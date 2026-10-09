@@ -67,7 +67,7 @@ public class CuentaController {
 
     // Crear cuenta
     @Operation(summary = "Crear nueva cuenta bancaria")
-    @PostMapping(value = "/cuentas", produces = MediaType.APPLICATION_JSON_VALUE, consumes = MediaType.APPLICATION_JSON_VALUE)
+    @PostMapping(value = "/cuentas", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ApiResponse<CuentaResponse>> crearCuenta(@RequestParam Long clienteId, @RequestParam(required = false) String numeroCuenta) {
         CuentaResponse cuenta = cuentaService.crearCuenta(clienteId, numeroCuenta);
         return new ResponseEntity<>(ApiResponse.of(ApiResponseEnum.OK, cuenta), HttpStatus.CREATED);

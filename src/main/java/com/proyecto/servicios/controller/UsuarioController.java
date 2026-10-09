@@ -56,13 +56,13 @@ public class UsuarioController {
         return ResponseEntity.ok(ApiResponse.of(ApiResponseEnum.OK, usuarios));
     }
 
-    @PostMapping(value = "/usuarios/agregar", produces = MediaType.APPLICATION_JSON_VALUE, consumes = MediaType.APPLICATION_JSON_VALUE)
+    @PostMapping(value = "/usuarios/agregar", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ApiResponse<UsuarioResponse>> crearUsuario(@RequestParam Long clienteId, @RequestParam String correo, @RequestParam String password) {
         UsuarioResponse usuario = usuarioService.crearUsuario(clienteId, correo, password);
         return new ResponseEntity<>(ApiResponse.of(ApiResponseEnum.OK, usuario), HttpStatus.CREATED);
     }
 
-    @PutMapping(value = "/usuarios/{id}", produces = MediaType.APPLICATION_JSON_VALUE, consumes = MediaType.APPLICATION_JSON_VALUE)
+    @PutMapping(value = "/usuarios/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ApiResponse<UsuarioResponse>> actualizarUsuario(@PathVariable Long id, @RequestParam(required = false) String correo, @RequestParam(required = false) String password) {
         UsuarioResponse usuario = usuarioService.actualizarUsuario(id, correo, password);
         return ResponseEntity.ok(ApiResponse.of(ApiResponseEnum.OK, usuario));
