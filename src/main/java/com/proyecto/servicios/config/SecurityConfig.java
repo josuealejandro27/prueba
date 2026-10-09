@@ -2,6 +2,7 @@ package com.proyecto.servicios.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -33,7 +34,14 @@ public class SecurityConfig {
             .csrf(csrf -> csrf.disable())
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/auth/login").permitAll()
+                // Público: login
+                .requestMatchers(HttpMethod.POST, "/auth/login").permitAll()
+                // Público: registro de un cliente
+                .requestMatchers(HttpMethod.POST, "/clientes").permitAll()
+                // Público: consultas (GET) de catálogos
+                .requestMatchers(HttpMethod.GET, "/catalogos", "/catalogos/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/gestopago/catalogo", "/catalogo/productos").permitAll()
+                // Documentación e infraestructura
                 .requestMatchers("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**", "/v3/api-docs.yaml").permitAll()
                 .requestMatchers("/actuator/health", "/actuator/info").permitAll()
                 .requestMatchers("/h2-console/**").permitAll()
