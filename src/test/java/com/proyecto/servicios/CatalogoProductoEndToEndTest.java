@@ -5,11 +5,25 @@ import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.LoggerContext;
 import ch.qos.logback.core.read.ListAppender;
 import com.proyecto.servicios.entity.mongo.CatalogoProductosCache;
+import com.proyecto.servicios.model.clientes.ClienteRequest;
+import com.proyecto.servicios.model.clientes.ClienteResponse;
 import com.proyecto.servicios.model.catalogo.ProductoDTO;
+import com.proyecto.servicios.repositorys.catalogos.CatalogoEstadoCivilRepository;
+import com.proyecto.servicios.repositorys.catalogos.CatalogoGenerosRepository;
+import com.proyecto.servicios.repositorys.catalogos.CatalogoPaisRepository;
+import com.proyecto.servicios.repositorys.clientes.CuentaBancariaRepository;
+import com.proyecto.servicios.repositorys.clientes.PersonaFisicaRepository;
+import com.proyecto.servicios.repositorys.clientes.UsuarioRepository;
+import com.proyecto.servicios.repositorys.gestopago.GestoPagoTokenRepository;
 import com.proyecto.servicios.repositorys.mongo.CatalogoProductosCacheRepository;
+import com.proyecto.servicios.service.ClienteService;
 import com.proyecto.servicios.service.ProductoCatalogoService;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.SignatureAlgorithm;
+import io.jsonwebtoken.security.Keys;
+import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -17,17 +31,28 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.math.BigDecimal;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
+import java.util.Date;
+import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -118,6 +143,7 @@ class CatalogoProductoEndToEndTest {
         // Credenciales aisladas de prueba: no se toca el token real del distribuidor
         registry.add("gestopago.auth.id-distribuidor", () -> "999");
         registry.add("gestopago.auth.codigo-dispositivo", () -> "TEST-CATALOGO-E2E");
+        registry.add("spring.data.mongodb.database", () -> "catalogo_cache_e2e_test");
     }
 
     @Autowired
@@ -127,7 +153,48 @@ class CatalogoProductoEndToEndTest {
     private CatalogoProductosCacheRepository cacheRepository;
 
     @Autowired
+    private UsuarioRepository usuarioRepository;
+
+    @Autowired
+    private GestoPagoTokenRepository tokenRepository;
+
+    @Autowired
+    private PersonaFisicaRepository personaFisicaRepository;
+
+    @Autowired
+    private CuentaBancariaRepository cuentaBancariaRepository;
+
+    @Autowired
+    private CatalogoGenerosRepository catalogoGenerosRepository;
+
+    @Autowired
+    private CatalogoPaisRepository catalogoPaisRepository;
+
+    @Autowired
+    private CatalogoEstadoCivilRepository catalogoEstadoCivilRepository;
+
+    @Autowired
+    private ClienteService clienteService;
+
+    @Autowired
+    private EntityManager entityManager;
+
+    @Autowired
     private TestRestTemplate testRestTemplate;
+
+    @Value("${jwt.secret}")
+    private String jwtSecret;
+
+    private ResponseEntity<String> consultarCatalogoAutenticado() {
+        String token = Jwts.builder()
+                .setSubject("test-catalogo")
+                .setExpiration(new Date(System.currentTimeMillis() + 60000))
+                .signWith(Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8)), SignatureAlgorithm.HS256)
+                .compact();
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(token);
+        return testRestTemplate.exchange("/catalogo/productos", HttpMethod.GET, new HttpEntity<>(headers), String.class);
+    }
 
     @BeforeEach
     void preparar() {
@@ -139,6 +206,107 @@ class CatalogoProductoEndToEndTest {
         AUTH_RECIBIDO[0] = null;
         ACCEPT_RECIBIDO[0] = null;
         cacheRepository.deleteAll();
+    }
+
+    @Test
+    @DisplayName("Los repositorios JPA de clientes y catálogos se registran y consultan PostgreSQL")
+    void repositoriosJpaDisponibles() {
+        assertThat(usuarioRepository.count()).isGreaterThanOrEqualTo(0);
+        assertThat(personaFisicaRepository.findByIdWithDetails(-1L)).isEmpty();
+        assertThat(cuentaBancariaRepository.count()).isGreaterThanOrEqualTo(0);
+        assertThat(catalogoGenerosRepository.count()).isGreaterThanOrEqualTo(0);
+    }
+
+    @Test
+    @DisplayName("Dos renovaciones simultáneas insertan un solo token y las posteriores conservan su ID")
+    void upsertTokenConcurrente() throws Exception {
+        int distribuidorPrueba = 9999;
+        String dispositivoPrueba = "TEST-UPSERT-" + UUID.randomUUID();
+        var executor = Executors.newFixedThreadPool(2);
+        var iniciar = new CountDownLatch(1);
+        try {
+            var primera = executor.submit(() -> {
+                try {
+                    if (!iniciar.await(10, TimeUnit.SECONDS)) {
+                        throw new IllegalStateException("No arrancó la prueba concurrente");
+                    }
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    throw new IllegalStateException(e);
+                }
+                tokenRepository.guardarOActualizar(distribuidorPrueba, dispositivoPrueba, "token-1", "Bearer", 3600L);
+            });
+            var segunda = executor.submit(() -> {
+                try {
+                    if (!iniciar.await(10, TimeUnit.SECONDS)) {
+                        throw new IllegalStateException("No arrancó la prueba concurrente");
+                    }
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    throw new IllegalStateException(e);
+                }
+                tokenRepository.guardarOActualizar(distribuidorPrueba, dispositivoPrueba, "token-2", "Bearer", 3600L);
+            });
+            iniciar.countDown();
+            primera.get(10, TimeUnit.SECONDS);
+            segunda.get(10, TimeUnit.SECONDS);
+
+            var guardado = tokenRepository.findByIdDistribuidorAndCodigoDispositivo(distribuidorPrueba, dispositivoPrueba).orElseThrow();
+            Integer id = guardado.getId();
+            assertThat(guardado.getToken()).isIn("token-1", "token-2");
+
+            tokenRepository.guardarOActualizar(distribuidorPrueba, dispositivoPrueba, "token-3", "Bearer", 3600L);
+            var renovado = tokenRepository.findByIdDistribuidorAndCodigoDispositivo(distribuidorPrueba, dispositivoPrueba).orElseThrow();
+            assertThat(renovado.getId()).isEqualTo(id);
+            assertThat(renovado.getToken()).isEqualTo("token-3");
+        } finally {
+            iniciar.countDown();
+            executor.shutdownNow();
+            tokenRepository.findByIdDistribuidorAndCodigoDispositivo(distribuidorPrueba, dispositivoPrueba)
+                    .ifPresent(token -> tokenRepository.deleteById(token.getId()));
+        }
+    }
+
+    @Test
+    @Transactional("sfTransactionManager")
+    @DisplayName("El alta de cliente guarda domicilio, información laboral, cuenta y usuario (con rollback)")
+    void altaClientePersisteRelaciones() {
+        ClienteRequest request = new ClienteRequest();
+        request.setNombre("Prueba");
+        request.setApellidoPaterno("Integracion");
+        request.setApellidoMaterno("Temporal");
+        request.setFechaNacimiento(java.sql.Date.valueOf("1990-01-01"));
+        String sufijo = String.format("%02d", Math.floorMod(UUID.randomUUID().hashCode(), 100));
+        request.setCurp("TEST900101HDFABC" + sufijo);
+        request.setRfc("TEST900101A" + sufijo);
+        request.setGeneroId(catalogoGenerosRepository.findAll().get(0).getId());
+        request.setNacionalidadId(catalogoPaisRepository.findAll().get(0).getId());
+        request.setEstadoCivilId(catalogoEstadoCivilRepository.findAll().get(0).getId());
+        request.setCorreo("test-" + UUID.randomUUID() + "@example.com");
+        request.setLada((short) 52);
+        request.setNumeroTelefono(5512345678L);
+        request.setCalle("Calle Prueba");
+        request.setNoExterior((short) 10);
+        request.setColonia("Centro");
+        request.setMunicipio("Ciudad");
+        request.setEstado("Estado");
+        request.setCp(12345);
+        request.setPais("Mexico");
+        request.setOcupacion("Empleado");
+        request.setEmpresa("Empresa Prueba");
+        request.setIngresoMensual(new BigDecimal("12000.00"));
+        request.setSaldoInicial(BigDecimal.ZERO);
+        request.setPassword("Prueba123!");
+
+        ClienteResponse creado = clienteService.crearCliente(request);
+        entityManager.flush();
+        entityManager.clear();
+
+        var cliente = personaFisicaRepository.findByIdWithDetails(creado.getId()).orElseThrow();
+        assertThat(cliente.getDomicilio().getCalle()).isEqualTo("Calle Prueba");
+        assertThat(cliente.getInformacionLaboral().getNumeroTelefono()).isEqualTo(5512345678L);
+        assertThat(usuarioRepository.findByClienteId(cliente.getId())).isPresent();
+        assertThat(cuentaBancariaRepository.findByPersonaFisicaId(cliente.getId())).isNotEmpty();
     }
 
     @Test
@@ -216,7 +384,7 @@ class CatalogoProductoEndToEndTest {
 
         // Endpoint local: 200 + JSON del catálogo
         ResponseEntity<String> respuesta =
-                testRestTemplate.getForEntity("/catalogo/productos", String.class);
+                consultarCatalogoAutenticado();
 
         assertThat(respuesta.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(respuesta.getBody())
@@ -266,7 +434,7 @@ class CatalogoProductoEndToEndTest {
     @DisplayName("Caché vacía: el endpoint responde 404 con el código del ApiResponseEnum")
     void cacheVaciaResponde404() {
         ResponseEntity<String> respuesta =
-                testRestTemplate.getForEntity("/catalogo/productos", String.class);
+                consultarCatalogoAutenticado();
 
         assertThat(respuesta.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
         assertThat(respuesta.getBody())

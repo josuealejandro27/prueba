@@ -2,7 +2,6 @@ package com.proyecto.servicios.service.Impl;
 
 import com.proyecto.servicios.client.GestoPagoAuthClient;
 import com.proyecto.servicios.entity.gestopago.GestoPagoToken;
-import com.proyecto.servicios.mapper.GestoPagoTokenMapper;
 import com.proyecto.servicios.model.gestopago.GestoPagoAuthResponse;
 import com.proyecto.servicios.repositorys.gestopago.GestoPagoTokenRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -17,7 +16,6 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -33,14 +31,11 @@ class GestoPagoTokenVigenciaTest {
     @Mock
     private GestoPagoTokenRepository repository;
 
-    @Mock
-    private GestoPagoTokenMapper mapper;
-
     private GestoPagoTokenServiceImpl service;
 
     @BeforeEach
     void configurar() {
-        service = new GestoPagoTokenServiceImpl(authClient, repository, mapper);
+        service = new GestoPagoTokenServiceImpl(authClient, repository);
     }
 
     private GestoPagoToken tokenValido(String valor) {
@@ -84,16 +79,15 @@ class GestoPagoTokenVigenciaTest {
     @DisplayName("Token expirado: lo renueva automáticamente y devuelve el nuevo")
     void tokenExpiradoSeRenueva() {
         when(repository.findByIdDistribuidorAndCodigoDispositivo(any(), any()))
-                .thenReturn(Optional.of(tokenExpirado()))                 // consulta 1: expirado
-                .thenReturn(Optional.of(tokenExpirado()))                 // consulta 2: dentro de renovar
-                .thenReturn(Optional.of(tokenValido("nuevo-abc")));       // consulta 3: tras renovar
+                .thenReturn(Optional.of(tokenExpirado()))
+                .thenReturn(Optional.of(tokenValido("nuevo-abc")));
         when(authClient.authenticate(any(), any(), any()))
                 .thenReturn(respuestaAuth("nuevo-abc"));
 
         assertThat(service.obtenerTokenVigente()).contains("nuevo-abc");
 
         verify(authClient, times(1)).authenticate(any(), any(), any());
-        verify(repository, atLeastOnce()).save(any(GestoPagoToken.class));
+        verify(repository).guardarOActualizar(null, null, "nuevo-abc", "Bearer", 3600L);
     }
 
     @Test
@@ -102,15 +96,24 @@ class GestoPagoTokenVigenciaTest {
         GestoPagoToken creado = tokenValido("recien-creado");
         when(repository.findByIdDistribuidorAndCodigoDispositivo(any(), any()))
                 .thenReturn(Optional.empty())
-                .thenReturn(Optional.empty())
                 .thenReturn(Optional.of(creado));
         when(authClient.authenticate(any(), any(), any()))
                 .thenReturn(respuestaAuth("recien-creado"));
-        when(mapper.toEntity(any(GestoPagoAuthResponse.class))).thenReturn(creado);
 
         assertThat(service.obtenerTokenVigente()).contains("recien-creado");
 
-        verify(repository).save(creado);
+        verify(repository).guardarOActualizar(null, null, "recien-creado", "Bearer", 3600L);
+    }
+
+    @Test
+    @DisplayName("Una respuesta sin token no reemplaza el token guardado")
+    void respuestaVaciaNoSeGuarda() {
+        when(authClient.authenticate(any(), any(), any()))
+                .thenReturn(respuestaAuth("  "));
+
+        service.renovarToken();
+
+        verifyNoInteractions(repository);
     }
 
     @Test
