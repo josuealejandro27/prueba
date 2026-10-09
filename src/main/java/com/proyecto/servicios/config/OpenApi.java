@@ -15,19 +15,7 @@ import org.springframework.context.annotation.Configuration;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Configuración de la documentación OpenAPI (Swagger UI).
- *
- * Se mantienen dos servidores en el desplegable ("Local" y "Render"), pero el
- * ORDEN depende del entorno, porque Swagger UI usa el PRIMERO como predeterminado:
- *
- *  - En Render  -> primero el público (RENDER_EXTERNAL_URL) y luego localhost.
- *  - En local   -> primero localhost y luego el público.
- *
- * Así el servidor predeterminado siempre es alcanzable desde el navegador y no
- * se rompe "Try it out". La URL pública puede forzarse con la propiedad
- * app.openapi.server-url (variable de entorno OPENAPI_SERVER_URL).
- */
+
 @Configuration
 public class OpenApi {
 
