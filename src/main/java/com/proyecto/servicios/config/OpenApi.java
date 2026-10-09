@@ -12,20 +12,37 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * Configuración de la documentación OpenAPI (Swagger UI).
  *
- * No fija una URL de servidor absoluta (evita "localhost:8080" en producción):
- *  - Por defecto usa la URL relativa "/", de modo que Swagger apunta al mismo
- *    origen desde el que se sirve (localhost en desarrollo, Render en producción).
- *  - Opcionalmente se puede sobrescribir con la propiedad
- *    app.openapi.server-url (variable de entorno OPENAPI_SERVER_URL).
+ * Se mantienen dos servidores en el desplegable ("Local" y "Render"), pero el
+ * ORDEN depende del entorno, porque Swagger UI usa el PRIMERO como predeterminado:
+ *
+ *  - En Render  -> primero el público (RENDER_EXTERNAL_URL) y luego localhost.
+ *  - En local   -> primero localhost y luego el público.
+ *
+ * Así el servidor predeterminado siempre es alcanzable desde el navegador y no
+ * se rompe "Try it out". La URL pública puede forzarse con la propiedad
+ * app.openapi.server-url (variable de entorno OPENAPI_SERVER_URL).
  */
 @Configuration
 public class OpenApi {
 
-    @Value("${app.openapi.server-url:}")
-    private String serverUrl;
+    private static final String RENDER_URL_DEFAULT = "https://prueba-gestopago.onrender.com";
+
+    /**
+     * URL pública del despliegue. En Render se resuelve sola desde
+     * RENDER_EXTERNAL_URL; si está vacía se asume entorno local.
+     */
+    @Value("${app.openapi.server-url:${RENDER_EXTERNAL_URL:}}")
+    private String deployedUrl;
+
+    /** URL local de desarrollo. */
+    @Value("${app.openapi.local-url:http://localhost:8080}")
+    private String localUrl;
 
     @Bean
     public OpenAPI customOpenAPI() {
@@ -47,11 +64,20 @@ public class OpenApi {
                                 .description("Ingrese su token JWT obtenido en el endpoint /auth/login")))
                 .addSecurityItem(new SecurityRequirement().addList("BearerAuth"));
 
-        if (serverUrl != null && !serverUrl.isBlank()) {
-            openAPI.addServersItem(new Server().url(serverUrl).description("Servidor desplegado"));
+        boolean deployed = deployedUrl != null && !deployedUrl.isBlank();
+        String publicUrl = deployed ? deployedUrl : RENDER_URL_DEFAULT;
+
+        List<Server> servers = new ArrayList<>();
+        if (deployed) {
+            // Producción (Render): el público primero
+            servers.add(new Server().url(publicUrl).description("Servidor Render"));
+            servers.add(new Server().url(localUrl).description("Servidor Local de Desarrollo"));
         } else {
-            openAPI.addServersItem(new Server().url("/").description("Servidor actual"));
+            // Desarrollo local: localhost primero
+            servers.add(new Server().url(localUrl).description("Servidor Local de Desarrollo"));
+            servers.add(new Server().url(publicUrl).description("Servidor Render"));
         }
+        openAPI.setServers(servers);
         return openAPI;
     }
 }
