@@ -11,6 +11,7 @@ import com.proyecto.servicios.repositorys.clientes.PersonaFisicaRepository;
 import com.proyecto.servicios.service.CuentaService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -48,30 +49,22 @@ public class CuentaServiceImpl implements CuentaService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<CuentaResponse> obtenerCuentasPorCliente(Long clienteId) {
-        log.info("Consultando cuentas del cliente con ID: {}", clienteId);
+    public List<CuentaResponse> buscarCuentas(Long clienteId, Boolean activas) {
+        log.info("Consultando cuentas con filtros - clienteId: {}, activas: {}", clienteId, activas);
 
-        return cuentaBancariaRepository.findByPersonaFisicaId(clienteId).stream()
-                .map(this::mapToResponse)
-                .collect(Collectors.toList());
-    }
+        Specification<CuentaBancaria> spec = Specification.where(null);
 
-    @Override
-    @Transactional(readOnly = true)
-    public List<CuentaResponse> obtenerCuentasPorEstatus(String estatus) {
-        log.info("Consultando cuentas con estatus: {}", estatus);
+        if (clienteId != null) {
+            spec = spec.and((root, query, cb) -> cb.equal(root.get("personaFisica").get("id"), clienteId));
+        }
 
-        return cuentaBancariaRepository.findByEstatus(estatus).stream()
-                .map(this::mapToResponse)
-                .collect(Collectors.toList());
-    }
+        if (activas != null) {
+            spec = spec.and((root, query, cb) -> activas
+                    ? cb.equal(cb.upper(root.get("estatus")), ESTATUS_ACTIVA)
+                    : cb.notEqual(cb.upper(root.get("estatus")), ESTATUS_ACTIVA));
+        }
 
-    @Override
-    @Transactional(readOnly = true)
-    public List<CuentaResponse> obtenerCuentasActivas() {
-        log.info("Consultando cuentas activas");
-
-        return cuentaBancariaRepository.findByEstatus(ESTATUS_ACTIVA).stream()
+        return cuentaBancariaRepository.findAll(spec).stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
     }

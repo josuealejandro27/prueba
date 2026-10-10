@@ -4,6 +4,7 @@ import com.proyecto.servicios.enums.ApiResponseEnum;
 import com.proyecto.servicios.model.ApiResponse;
 import com.proyecto.servicios.model.clientes.UsuarioResponse;
 import com.proyecto.servicios.service.UsuarioService;
+import io.swagger.v3.oas.annotations.Operation;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -26,27 +27,15 @@ public class UsuarioController {
         return ResponseEntity.ok(ApiResponse.of(ApiResponseEnum.OK, usuario));
     }
 
-    @GetMapping(value = "/usuarios", params = "correo", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<ApiResponse<UsuarioResponse>> obtenerUsuarioPorCorreo(@RequestParam String correo) {
-        UsuarioResponse usuario = usuarioService.obtenerUsuarioPorCorreo(correo);
-        return ResponseEntity.ok(ApiResponse.of(ApiResponseEnum.OK, usuario));
-    }
-
-    @GetMapping(value = "/usuarios", params = "clienteId", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<ApiResponse<UsuarioResponse>> obtenerUsuarioPorClienteId(@RequestParam Long clienteId) {
-        UsuarioResponse usuario = usuarioService.obtenerUsuarioPorClienteId(clienteId);
-        return ResponseEntity.ok(ApiResponse.of(ApiResponseEnum.OK, usuario));
-    }
-
+    @Operation(summary = "Consultar usuarios con filtros",
+            description = "Todos los parámetros son opcionales y combinables. Sin parámetros devuelve todos los usuarios. "
+                    + "'correo' no distingue mayúsculas; 'activos': true = solo activos, false = solo inactivos.")
     @GetMapping(value = "/usuarios", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<ApiResponse<List<UsuarioResponse>>> obtenerTodos() {
-        List<UsuarioResponse> usuarios = usuarioService.obtenerTodos();
-        return ResponseEntity.ok(ApiResponse.of(ApiResponseEnum.OK, usuarios));
-    }
-
-    @GetMapping(value = "/usuarios", params = "activos", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<ApiResponse<List<UsuarioResponse>>> obtenerUsuariosActivos(@RequestParam boolean activos) {
-        List<UsuarioResponse> usuarios = usuarioService.obtenerUsuariosActivos();
+    public ResponseEntity<ApiResponse<List<UsuarioResponse>>> buscarUsuarios(
+            @RequestParam(required = false) String correo,
+            @RequestParam(required = false) Long clienteId,
+            @RequestParam(required = false) Boolean activos) {
+        List<UsuarioResponse> usuarios = usuarioService.buscarUsuarios(correo, clienteId, activos);
         return ResponseEntity.ok(ApiResponse.of(ApiResponseEnum.OK, usuarios));
     }
 

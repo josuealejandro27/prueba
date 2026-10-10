@@ -10,6 +10,7 @@ import com.proyecto.servicios.repositorys.clientes.UsuarioRepository;
 import com.proyecto.servicios.service.UsuarioService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -52,42 +53,27 @@ public class UsuarioServiceImpl implements UsuarioService {
 
     @Override
     @Transactional(readOnly = true)
-    public UsuarioResponse obtenerUsuarioPorCorreo(String correo) {
-        log.info("Consultando usuario con correo: {}", correo);
+    public List<UsuarioResponse> buscarUsuarios(String correo, Long clienteId, Boolean activos) {
+        String correoLimpio = (correo != null && !correo.isBlank()) ? correo.trim() : null;
+        log.info("Consultando usuarios con filtros - correo: {}, clienteId: {}, activos: {}", correoLimpio, clienteId, activos);
 
-        Usuario usuario = usuarioRepository.findByCorreo(correo)
-                .orElseThrow(() -> new UsuarioException(CODIGO_USUARIO, "Usuario no encontrado con correo: " + correo, HttpStatus.NOT_FOUND));
+        Specification<Usuario> spec = Specification.where(null);
 
-        return mapToResponse(usuario);
-    }
+        if (correoLimpio != null) {
+            spec = spec.and((root, query, cb) -> cb.equal(cb.lower(root.get("correo")), correoLimpio.toLowerCase()));
+        }
 
-    @Override
-    @Transactional(readOnly = true)
-    public UsuarioResponse obtenerUsuarioPorClienteId(Long clienteId) {
-        log.info("Consultando usuario del cliente con ID: {}", clienteId);
+        if (clienteId != null) {
+            spec = spec.and((root, query, cb) -> cb.equal(root.get("cliente").get("id"), clienteId));
+        }
 
-        Usuario usuario = usuarioRepository.findByClienteId(clienteId)
-                .orElseThrow(() -> new UsuarioException(CODIGO_USUARIO, "Usuario no encontrado para el cliente con ID: " + clienteId, HttpStatus.NOT_FOUND));
+        if (activos != null) {
+            spec = spec.and((root, query, cb) -> activos
+                    ? cb.isTrue(root.get("activo"))
+                    : cb.isFalse(root.get("activo")));
+        }
 
-        return mapToResponse(usuario);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<UsuarioResponse> obtenerTodos() {
-        log.info("Consultando todos los usuarios");
-
-        return usuarioRepository.findAll().stream()
-                .map(this::mapToResponse)
-                .collect(Collectors.toList());
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<UsuarioResponse> obtenerUsuariosActivos() {
-        log.info("Consultando usuarios activos");
-
-        return usuarioRepository.findByActivoTrue().stream()
+        return usuarioRepository.findAll(spec).stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
     }
