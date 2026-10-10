@@ -33,11 +33,15 @@ public class CuentaController {
         return ResponseEntity.ok(ApiResponse.of(ApiResponseEnum.OK, cuenta));
     }
 
-    // Consultar cuentas por cliente
-    @Operation(summary = "Consultar cuentas con filtros")
-    @GetMapping(value = "/cuentas", params = "clienteId", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<ApiResponse<List<CuentaResponse>>> obtenerCuentasPorCliente(@RequestParam Long clienteId) {
-        List<CuentaResponse> cuentas = cuentaService.obtenerCuentasPorCliente(clienteId);
+    // Consultar cuentas con filtros opcionales (combinables)
+    @Operation(summary = "Consultar cuentas con filtros",
+            description = "Todos los parámetros son opcionales y combinables. Sin parámetros devuelve todas las cuentas. "
+                    + "'activas': true = solo cuentas ACTIVAS, false = solo cuentas no activas.")
+    @GetMapping(value = "/cuentas", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<ApiResponse<List<CuentaResponse>>> buscarCuentas(
+            @RequestParam(required = false) Long clienteId,
+            @RequestParam(required = false) Boolean activas) {
+        List<CuentaResponse> cuentas = cuentaService.buscarCuentas(clienteId, activas);
         return ResponseEntity.ok(ApiResponse.of(ApiResponseEnum.OK, cuentas));
     }
 
@@ -47,22 +51,6 @@ public class CuentaController {
     public ResponseEntity<ApiResponse<java.math.BigDecimal>> consultarSaldo(@PathVariable String numeroCuenta) {
         CuentaResponse cuenta = cuentaService.obtenerCuentaPorNumero(numeroCuenta);
         return ResponseEntity.ok(ApiResponse.of(ApiResponseEnum.OK, cuenta.getSaldo()));
-    }
-
-    // Consultar cuentas por estatus
-    @Operation(summary = "Consultar cuentas con filtros")
-    @GetMapping(value = "/cuentas", params = "estatus", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<ApiResponse<List<CuentaResponse>>> obtenerCuentasPorEstatus(@RequestParam String estatus) {
-        List<CuentaResponse> cuentas = cuentaService.obtenerCuentasPorEstatus(estatus);
-        return ResponseEntity.ok(ApiResponse.of(ApiResponseEnum.OK, cuentas));
-    }
-
-    // Consultar cuentas activas
-    @Operation(summary = "Consultar cuentas con filtros")
-    @GetMapping(value = "/cuentas", params = "activas", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<ApiResponse<List<CuentaResponse>>> obtenerCuentasActivas(@RequestParam boolean activas) {
-        List<CuentaResponse> cuentas = cuentaService.obtenerCuentasActivas();
-        return ResponseEntity.ok(ApiResponse.of(ApiResponseEnum.OK, cuentas));
     }
 
     // Crear cuenta

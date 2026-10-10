@@ -10,11 +10,14 @@ public interface CuentaService {
     // Consultas
     CuentaResponse obtenerCuentaPorNumero(String numeroCuenta);
 
-    List<CuentaResponse> obtenerCuentasPorCliente(Long clienteId);
-
-    List<CuentaResponse> obtenerCuentasPorEstatus(String estatus);
-
-    List<CuentaResponse> obtenerCuentasActivas();
+    /**
+     * Consulta cuentas con filtros opcionales (combinables).
+     *
+     * @param clienteId filtro por cliente; {@code null} = sin filtro
+     * @param activas   {@code true} = solo cuentas ACTIVAS, {@code false} = solo no activas,
+     *                  {@code null} = sin filtro
+     */
+    List<CuentaResponse> buscarCuentas(Long clienteId, Boolean activas);
 
     // Actualización
     CuentaResponse actualizarCuenta(String numeroCuenta, CuentaUpdateRequest request);

@@ -8,13 +8,14 @@ public interface UsuarioService {
 
     UsuarioResponse obtenerUsuario(Long id);
 
-    UsuarioResponse obtenerUsuarioPorCorreo(String correo);
-
-    UsuarioResponse obtenerUsuarioPorClienteId(Long clienteId);
-
-    List<UsuarioResponse> obtenerTodos();
-
-    List<UsuarioResponse> obtenerUsuariosActivos();
+    /**
+     * Busca usuarios con filtros opcionales (combinables).
+     *
+     * @param correo    filtro por correo (no distingue mayúsculas); {@code null} = sin filtro
+     * @param clienteId filtro por cliente; {@code null} = sin filtro
+     * @param activos   {@code true} = solo activos, {@code false} = solo inactivos, {@code null} = sin filtro
+     */
+    List<UsuarioResponse> buscarUsuarios(String correo, Long clienteId, Boolean activos);
 
     List<UsuarioResponse> buscarPorCorreo(String correo);
 
