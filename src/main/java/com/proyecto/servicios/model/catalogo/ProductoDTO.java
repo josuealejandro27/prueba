@@ -33,20 +33,24 @@ public class ProductoDTO {
 
     @JsonProperty("idproducto")
     @JacksonXmlProperty(isAttribute = true, localName = "idProducto")
+    @io.swagger.v3.oas.annotations.media.Schema(example = "101")
     private Long idProducto;
 
     /** Nombre comercial del producto (ej. "ABIB 100"). */
     @JsonProperty("producto")
     @JacksonXmlProperty(isAttribute = true, localName = "producto")
+    @io.swagger.v3.oas.annotations.media.Schema(example = "ABIB 100")
     private String producto;
 
     /** Servicio o categoría a la que pertenece (ej. "ABIB"). */
     @JsonProperty("servicio")
     @JacksonXmlProperty(isAttribute = true, localName = "servicio")
+    @io.swagger.v3.oas.annotations.media.Schema(example = "ABIB")
     private String servicio;
 
     @JsonProperty("precio")
     @JacksonXmlProperty(isAttribute = true, localName = "precio")
+    @io.swagger.v3.oas.annotations.media.Schema(example = "99.90")
     private BigDecimal precio;
 
     @JsonProperty("idservicio")

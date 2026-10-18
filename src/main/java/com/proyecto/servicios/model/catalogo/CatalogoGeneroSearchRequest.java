@@ -17,5 +17,6 @@ public class CatalogoGeneroSearchRequest extends PaginaRequest {
 
     /** Criterio de búsqueda parcial por tipo de género. */
     @Size(max = 50, message = "El tipo de género no puede tener más de 50 caracteres")
+    @io.swagger.v3.oas.annotations.media.Schema(example = "Masculino")
     private String tipo;
 }

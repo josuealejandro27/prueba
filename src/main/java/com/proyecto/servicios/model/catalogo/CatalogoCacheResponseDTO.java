@@ -22,9 +22,12 @@ import java.util.List;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class CatalogoCacheResponseDTO {
 
+    @io.swagger.v3.oas.annotations.media.Schema(example = "901")
     private Integer total;
 
+    @io.swagger.v3.oas.annotations.media.Schema(example = "2026-01-15T10:30:00")
     private LocalDateTime fechaActualizacion;
 
+    @io.swagger.v3.oas.annotations.media.Schema(description = "Productos del catálogo sincronizado")
     private List<ProductoDTO> productos;
 }

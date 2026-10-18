@@ -19,11 +19,14 @@ public class UsuarioSearchRequest extends PaginaRequest {
 
     /** Criterio de búsqueda parcial por correo (no requiere un correo completo). */
     @Size(max = 100, message = "El correo electrónico no puede tener más de 100 caracteres")
+    @io.swagger.v3.oas.annotations.media.Schema(example = "juan.perez")
     private String correo;
 
     @Positive(message = "El identificador del cliente debe ser un valor positivo")
+    @io.swagger.v3.oas.annotations.media.Schema(example = "1")
     private Long clienteId;
 
     /** {@code true} = solo activos, {@code false} = solo inactivos, {@code null} = sin filtro. */
+    @io.swagger.v3.oas.annotations.media.Schema(example = "true")
     private Boolean activos;
 }

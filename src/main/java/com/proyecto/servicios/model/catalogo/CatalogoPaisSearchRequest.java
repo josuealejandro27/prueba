@@ -17,5 +17,6 @@ public class CatalogoPaisSearchRequest extends PaginaRequest {
 
     /** Criterio de búsqueda parcial por nombre del país. */
     @Size(max = 100, message = "El nombre del país no puede tener más de 100 caracteres")
+    @io.swagger.v3.oas.annotations.media.Schema(example = "México")
     private String nombre;
 }

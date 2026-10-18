@@ -18,8 +18,10 @@ public class CatalogoEstadoSearchRequest extends PaginaRequest {
 
     /** Criterio de búsqueda parcial por nombre del estado (no requiere el nombre completo). */
     @Size(max = 100, message = "El nombre del estado no debe ser mayor a 100 caracteres")
+    @io.swagger.v3.oas.annotations.media.Schema(example = "Morelos")
     private String nombre;
 
     @Positive(message = "El identificador del país debe ser un valor positivo")
+    @io.swagger.v3.oas.annotations.media.Schema(example = "1")
     private Long paisId;
 }

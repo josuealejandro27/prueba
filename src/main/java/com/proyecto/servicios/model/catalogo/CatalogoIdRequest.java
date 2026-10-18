@@ -18,5 +18,6 @@ public class CatalogoIdRequest {
 
     @NotNull(message = "El identificador es obligatorio")
     @Positive(message = "El identificador debe ser un valor positivo")
+    @io.swagger.v3.oas.annotations.media.Schema(example = "1")
     private Long id;
 }

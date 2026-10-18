@@ -13,8 +13,15 @@ import lombok.Setter;
 @NoArgsConstructor
 public class CatalogoColoniaResponse {
 
+    @io.swagger.v3.oas.annotations.media.Schema(example = "101")
     private Long id;
+
+    @io.swagger.v3.oas.annotations.media.Schema(example = "Centro")
     private String nombre;
+
+    @io.swagger.v3.oas.annotations.media.Schema(example = "37")
     private Long municipioId;
+
+    @io.swagger.v3.oas.annotations.media.Schema(example = "Cuernavaca")
     private String municipioNombre;
 }

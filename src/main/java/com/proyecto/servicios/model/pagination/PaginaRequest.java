@@ -20,9 +20,11 @@ import org.springframework.data.domain.Pageable;
 @NoArgsConstructor
 public class PaginaRequest {
 
+    @io.swagger.v3.oas.annotations.media.Schema(example = "0", description = "Página a consultar (base 0: 0 = primera). Opcional, por defecto 0")
     @Min(value = 0, message = "El número de página no puede ser negativo")
     private Integer pagina = 0;
 
+    @io.swagger.v3.oas.annotations.media.Schema(example = "10", description = "Elementos por página (1 a 100). Opcional, por defecto 10")
     @Min(value = 1, message = "El tamaño de página debe ser al menos 1")
     @Max(value = 100, message = "El tamaño de página no puede ser mayor a 100")
     private Integer tamano = 10;
