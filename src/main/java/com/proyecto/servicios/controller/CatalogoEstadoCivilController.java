@@ -1,18 +1,27 @@
 package com.proyecto.servicios.controller;
 
-import com.proyecto.servicios.entity.catalogos.CatalogoEstadoCivil;
 import com.proyecto.servicios.enums.ApiResponseEnum;
 import com.proyecto.servicios.model.ApiResponse;
+import com.proyecto.servicios.model.catalogo.CatalogoEstadoCivilActualizaRequest;
+import com.proyecto.servicios.model.catalogo.CatalogoEstadoCivilRequest;
+import com.proyecto.servicios.model.catalogo.CatalogoEstadoCivilResponse;
+import com.proyecto.servicios.model.catalogo.CatalogoEstadoCivilSearchRequest;
+import com.proyecto.servicios.model.catalogo.CatalogoIdRequest;
+import com.proyecto.servicios.model.pagination.PageResponse;
 import com.proyecto.servicios.service.CatalogoEstadoCivilService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RestController;
 
 @Tag(name = "Catálogo de Estado Civil", description = "Endpoints para la gestión del catálogo de estados civiles")
 @RestController
@@ -24,45 +33,47 @@ public class CatalogoEstadoCivilController {
         this.catalogoEstadoCivilService = catalogoEstadoCivilService;
     }
 
-    @Operation(summary = "Obtener estado civil por ID")
-    @GetMapping(value = "/catalogos/estado-civil/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<ApiResponse<CatalogoEstadoCivil>> obtenerPorId(@PathVariable Long id) {
-        CatalogoEstadoCivil estadoCivil = catalogoEstadoCivilService.obtenerPorId(id);
+    @Operation(summary = "Consultar estado civil por ID")
+    @GetMapping(value = "/catalogos/estado-civil/consultar", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<ApiResponse<CatalogoEstadoCivilResponse>> obtenerPorId(
+            @Valid @RequestBody CatalogoIdRequest request) {
+        CatalogoEstadoCivilResponse estadoCivil = catalogoEstadoCivilService.obtenerPorId(request.getId());
         return ResponseEntity.ok(ApiResponse.of(ApiResponseEnum.OK, estadoCivil));
     }
 
+    @Operation(summary = "Consultar estados civiles con filtros",
+            description = "Todos los criterios son opcionales y combinables. Sin criterios devuelve todos los estados civiles.")
+    @GetMapping(value = "/catalogos/estado-civil/buscar", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<ApiResponse<PageResponse<CatalogoEstadoCivilResponse>>> buscar(
+            @Valid @RequestBody(required = false) CatalogoEstadoCivilSearchRequest request) {
+        CatalogoEstadoCivilSearchRequest filtros = request != null ? request : new CatalogoEstadoCivilSearchRequest();
+        Page<CatalogoEstadoCivilResponse> estadosCiviles = catalogoEstadoCivilService.buscar(filtros);
+        return ResponseEntity.ok(ApiResponse.of(ApiResponseEnum.OK, PageResponse.desde(estadosCiviles)));
+    }
+
+    @Operation(summary = "Crear estado civil")
+    @PostMapping(value = "/catalogos/estado-civil/agregar", produces = MediaType.APPLICATION_JSON_VALUE,
+            consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<ApiResponse<CatalogoEstadoCivilResponse>> crear(
+            @Valid @RequestBody CatalogoEstadoCivilRequest request) {
+        CatalogoEstadoCivilResponse estadoCivil = catalogoEstadoCivilService.crear(request);
+        return new ResponseEntity<>(ApiResponse.of(ApiResponseEnum.CREADO, estadoCivil), HttpStatus.CREATED);
+    }
+
     @Operation(summary = "Actualizar estado civil")
-    @PutMapping(value = "/catalogos/estado-civil/{id}", produces = MediaType.APPLICATION_JSON_VALUE, consumes = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<ApiResponse<CatalogoEstadoCivil>> actualizar(@PathVariable Long id, @Valid @RequestBody CatalogoEstadoCivil catalogoEstadoCivil) {
-        CatalogoEstadoCivil estadoCivil = catalogoEstadoCivilService.actualizar(id, catalogoEstadoCivil);
+    @PutMapping(value = "/catalogos/estado-civil/actualizar", produces = MediaType.APPLICATION_JSON_VALUE,
+            consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<ApiResponse<CatalogoEstadoCivilResponse>> actualizar(
+            @Valid @RequestBody CatalogoEstadoCivilActualizaRequest request) {
+        CatalogoEstadoCivilResponse estadoCivil = catalogoEstadoCivilService.actualizar(request);
         return ResponseEntity.ok(ApiResponse.of(ApiResponseEnum.OK, estadoCivil));
     }
 
     @Operation(summary = "Eliminar estado civil")
-    @DeleteMapping(value = "/catalogos/estado-civil/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<ApiResponse<Void>> eliminar(@PathVariable Long id) {
-        catalogoEstadoCivilService.eliminar(id);
+    @PatchMapping(value = "/catalogos/estado-civil/eliminar", produces = MediaType.APPLICATION_JSON_VALUE,
+            consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<ApiResponse<Void>> eliminar(@Valid @RequestBody CatalogoIdRequest request) {
+        catalogoEstadoCivilService.eliminar(request.getId());
         return ResponseEntity.ok(ApiResponse.of(ApiResponseEnum.OK, null));
-    }
-
-    @Operation(summary = "Obtener todos los estados civiles")
-    @GetMapping(value = "/catalogos/estado-civil", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<ApiResponse<List<CatalogoEstadoCivil>>> obtenerTodos() {
-        List<CatalogoEstadoCivil> estadosCiviles = catalogoEstadoCivilService.obtenerTodos();
-        return ResponseEntity.ok(ApiResponse.of(ApiResponseEnum.OK, estadosCiviles));
-    }
-
-    @Operation(summary = "Crear nuevo estado civil")
-    @PostMapping(value = "/catalogos/estado-civil", produces = MediaType.APPLICATION_JSON_VALUE, consumes = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<ApiResponse<CatalogoEstadoCivil>> crear(@Valid @RequestBody CatalogoEstadoCivil catalogoEstadoCivil) {
-        CatalogoEstadoCivil estadoCivil = catalogoEstadoCivilService.crear(catalogoEstadoCivil);
-        return new ResponseEntity<>(ApiResponse.of(ApiResponseEnum.OK, estadoCivil), HttpStatus.CREATED);
-    }
-
-    @Operation(summary = "Buscar estado civil por nombre")
-    @GetMapping(value = "/catalogos/estado-civil/buscar", params = "nombre", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<ApiResponse<List<CatalogoEstadoCivil>>> buscarPorNombre(@RequestParam String nombre) {
-        List<CatalogoEstadoCivil> estadosCiviles = catalogoEstadoCivilService.buscarPorNombre(nombre);
-        return ResponseEntity.ok(ApiResponse.of(ApiResponseEnum.OK, estadosCiviles));
     }
 }

@@ -1,9 +1,9 @@
 package com.proyecto.servicios.service;
 
 import com.proyecto.servicios.model.clientes.CuentaResponse;
+import com.proyecto.servicios.model.clientes.CuentaSearchRequest;
 import com.proyecto.servicios.model.clientes.CuentaUpdateRequest;
-
-import java.util.List;
+import org.springframework.data.domain.Page;
 
 public interface CuentaService {
 
@@ -11,13 +11,13 @@ public interface CuentaService {
     CuentaResponse obtenerCuentaPorNumero(String numeroCuenta);
 
     /**
-     * Consulta cuentas con filtros opcionales (combinables).
+     * Consulta cuentas con filtros opcionales (combinables) y paginación.
      *
-     * @param clienteId filtro por cliente; {@code null} = sin filtro
-     * @param activas   {@code true} = solo cuentas ACTIVAS, {@code false} = solo no activas,
-     *                  {@code null} = sin filtro
+     * @param filtros criterios de búsqueda; todos opcionales y combinables
+     *                ({@code clienteId}, {@code activas}) más paginación
+     * @return página de cuentas que cumplen los criterios
      */
-    List<CuentaResponse> buscarCuentas(Long clienteId, Boolean activas);
+    Page<CuentaResponse> buscarCuentas(CuentaSearchRequest filtros);
 
     // Actualización
     CuentaResponse actualizarCuenta(String numeroCuenta, CuentaUpdateRequest request);

@@ -37,9 +37,9 @@ public class SecurityConfig {
                 // Público: login
                 .requestMatchers(HttpMethod.POST, "/auth/login").permitAll()
                 // Público: registro de un cliente
-                .requestMatchers(HttpMethod.POST, "/clientes").permitAll()
-                // Público: consultas (GET) de catálogos
-                .requestMatchers(HttpMethod.GET, "/catalogos", "/catalogos/**").permitAll()
+                .requestMatchers(HttpMethod.POST, "/clientes/agregar").permitAll()
+                // Público: consultas de catálogos (búsqueda y consulta por id) vía GET con DTO en el cuerpo
+                .requestMatchers(HttpMethod.GET, "/catalogos/*/consultar", "/catalogos/*/buscar").permitAll()
                 .requestMatchers(HttpMethod.GET, "/gestopago/catalogo", "/catalogo/productos").permitAll()
                 // Documentación e infraestructura
                 .requestMatchers("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**", "/v3/api-docs.yaml").permitAll()

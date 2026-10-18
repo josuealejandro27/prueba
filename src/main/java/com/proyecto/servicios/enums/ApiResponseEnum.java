@@ -13,6 +13,8 @@ import org.springframework.http.HttpStatus;
 public enum ApiResponseEnum {
 
     OK("200", "200", "Operación exitosa", HttpStatus.OK),
+    CREADO("201", "201", "Recurso creado exitosamente", HttpStatus.CREATED),
+    NO_ENCONTRADO("GEN001", "404", "Recurso no encontrado", HttpStatus.NOT_FOUND),
     CATALOGO_NO_DISPONIBLE("CAT001", "404", "El catálogo de productos no se encuentra disponible en caché", HttpStatus.NOT_FOUND),
     ERROR_INTERNO("ERR001", "500", "Ocurrió un error interno al consultar el catálogo de productos", HttpStatus.INTERNAL_SERVER_ERROR),
     ERROR_COMUNICACION("ERR002", "503", "No fue posible comunicarse con el servicio externo de productos", HttpStatus.SERVICE_UNAVAILABLE),

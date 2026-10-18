@@ -1,20 +1,20 @@
 package com.proyecto.servicios.service;
 
-import com.proyecto.servicios.entity.catalogos.CatalogoPais;
-
-import java.util.List;
+import com.proyecto.servicios.model.catalogo.CatalogoPaisActualizaRequest;
+import com.proyecto.servicios.model.catalogo.CatalogoPaisRequest;
+import com.proyecto.servicios.model.catalogo.CatalogoPaisResponse;
+import com.proyecto.servicios.model.catalogo.CatalogoPaisSearchRequest;
+import org.springframework.data.domain.Page;
 
 public interface CatalogoPaisService {
 
-    List<CatalogoPais> obtenerTodos();
+    CatalogoPaisResponse obtenerPorId(Long id);
 
-    CatalogoPais obtenerPorId(Long id);
+    Page<CatalogoPaisResponse> buscar(CatalogoPaisSearchRequest filtros);
 
-    CatalogoPais crear(CatalogoPais catalogoPais);
+    CatalogoPaisResponse crear(CatalogoPaisRequest request);
 
-    CatalogoPais actualizar(Long id, CatalogoPais catalogoPais);
+    CatalogoPaisResponse actualizar(CatalogoPaisActualizaRequest request);
 
     void eliminar(Long id);
-
-    List<CatalogoPais> buscarPorNombre(String nombre);
 }

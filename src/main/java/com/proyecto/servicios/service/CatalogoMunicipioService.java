@@ -1,22 +1,20 @@
 package com.proyecto.servicios.service;
 
-import com.proyecto.servicios.entity.catalogos.CatalogoMunicipio;
-
-import java.util.List;
+import com.proyecto.servicios.model.catalogo.CatalogoMunicipioActualizaRequest;
+import com.proyecto.servicios.model.catalogo.CatalogoMunicipioRequest;
+import com.proyecto.servicios.model.catalogo.CatalogoMunicipioResponse;
+import com.proyecto.servicios.model.catalogo.CatalogoMunicipioSearchRequest;
+import org.springframework.data.domain.Page;
 
 public interface CatalogoMunicipioService {
 
-    List<CatalogoMunicipio> obtenerTodos();
+    CatalogoMunicipioResponse obtenerPorId(Long id);
 
-    CatalogoMunicipio obtenerPorId(Long id);
+    Page<CatalogoMunicipioResponse> buscar(CatalogoMunicipioSearchRequest filtros);
 
-    CatalogoMunicipio crear(CatalogoMunicipio catalogoMunicipio);
+    CatalogoMunicipioResponse crear(CatalogoMunicipioRequest request);
 
-    CatalogoMunicipio actualizar(Long id, CatalogoMunicipio catalogoMunicipio);
+    CatalogoMunicipioResponse actualizar(CatalogoMunicipioActualizaRequest request);
 
     void eliminar(Long id);
-
-    List<CatalogoMunicipio> buscarPorNombre(String nombre);
-
-    List<CatalogoMunicipio> obtenerPorEstadoId(Long estadoId);
 }

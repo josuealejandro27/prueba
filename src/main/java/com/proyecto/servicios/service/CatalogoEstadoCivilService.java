@@ -1,20 +1,20 @@
 package com.proyecto.servicios.service;
 
-import com.proyecto.servicios.entity.catalogos.CatalogoEstadoCivil;
-
-import java.util.List;
+import com.proyecto.servicios.model.catalogo.CatalogoEstadoCivilActualizaRequest;
+import com.proyecto.servicios.model.catalogo.CatalogoEstadoCivilRequest;
+import com.proyecto.servicios.model.catalogo.CatalogoEstadoCivilResponse;
+import com.proyecto.servicios.model.catalogo.CatalogoEstadoCivilSearchRequest;
+import org.springframework.data.domain.Page;
 
 public interface CatalogoEstadoCivilService {
 
-    List<CatalogoEstadoCivil> obtenerTodos();
+    CatalogoEstadoCivilResponse obtenerPorId(Long id);
 
-    CatalogoEstadoCivil obtenerPorId(Long id);
+    Page<CatalogoEstadoCivilResponse> buscar(CatalogoEstadoCivilSearchRequest filtros);
 
-    CatalogoEstadoCivil crear(CatalogoEstadoCivil catalogoEstadoCivil);
+    CatalogoEstadoCivilResponse crear(CatalogoEstadoCivilRequest request);
 
-    CatalogoEstadoCivil actualizar(Long id, CatalogoEstadoCivil catalogoEstadoCivil);
+    CatalogoEstadoCivilResponse actualizar(CatalogoEstadoCivilActualizaRequest request);
 
     void eliminar(Long id);
-
-    List<CatalogoEstadoCivil> buscarPorNombre(String nombre);
 }

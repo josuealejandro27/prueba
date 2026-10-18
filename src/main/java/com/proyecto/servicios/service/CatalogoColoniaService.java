@@ -1,22 +1,20 @@
 package com.proyecto.servicios.service;
 
-import com.proyecto.servicios.entity.catalogos.CatalogoColonia;
-
-import java.util.List;
+import com.proyecto.servicios.model.catalogo.CatalogoColoniaActualizaRequest;
+import com.proyecto.servicios.model.catalogo.CatalogoColoniaRequest;
+import com.proyecto.servicios.model.catalogo.CatalogoColoniaResponse;
+import com.proyecto.servicios.model.catalogo.CatalogoColoniaSearchRequest;
+import org.springframework.data.domain.Page;
 
 public interface CatalogoColoniaService {
 
-    List<CatalogoColonia> obtenerTodos();
+    CatalogoColoniaResponse obtenerPorId(Long id);
 
-    CatalogoColonia obtenerPorId(Long id);
+    Page<CatalogoColoniaResponse> buscar(CatalogoColoniaSearchRequest filtros);
 
-    CatalogoColonia crear(CatalogoColonia catalogoColonia);
+    CatalogoColoniaResponse crear(CatalogoColoniaRequest request);
 
-    CatalogoColonia actualizar(Long id, CatalogoColonia catalogoColonia);
+    CatalogoColoniaResponse actualizar(CatalogoColoniaActualizaRequest request);
 
     void eliminar(Long id);
-
-    List<CatalogoColonia> buscarPorNombre(String nombre);
-
-    List<CatalogoColonia> obtenerPorMunicipioId(Long municipioId);
 }

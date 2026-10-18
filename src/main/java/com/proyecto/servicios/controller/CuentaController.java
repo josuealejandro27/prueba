@@ -2,18 +2,27 @@ package com.proyecto.servicios.controller;
 
 import com.proyecto.servicios.enums.ApiResponseEnum;
 import com.proyecto.servicios.model.ApiResponse;
+import com.proyecto.servicios.model.clientes.CuentaCreateRequest;
+import com.proyecto.servicios.model.clientes.CuentaNumeroRequest;
 import com.proyecto.servicios.model.clientes.CuentaResponse;
+import com.proyecto.servicios.model.clientes.CuentaSearchRequest;
 import com.proyecto.servicios.model.clientes.CuentaUpdateRequest;
+import com.proyecto.servicios.model.pagination.PageResponse;
 import com.proyecto.servicios.service.CuentaService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RestController;
 
-import java.util.List;
+import java.math.BigDecimal;
 
 @Tag(name = "Gestión de Cuentas Bancarias", description = "Endpoints para la apertura, consulta de saldo, filtrado y administración de cuentas bancarias")
 @RestController
@@ -26,46 +35,56 @@ public class CuentaController {
     }
 
     // Consultar cuenta por número
-    @Operation(summary = "Consultar cuenta por número")
-    @GetMapping(value = "/cuentas/{numeroCuenta}", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<ApiResponse<CuentaResponse>> obtenerCuentaPorNumero(@PathVariable String numeroCuenta) {
-        CuentaResponse cuenta = cuentaService.obtenerCuentaPorNumero(numeroCuenta);
+    @Operation(summary = "Consultar cuenta por número",
+            description = "Método GET con el número de cuenta enviado en el cuerpo (DTO) para respetar la "
+                    + "restricción de no usar @PathVariable ni @RequestParam.")
+    @GetMapping(value = "/cuentas/consultar", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<ApiResponse<CuentaResponse>> obtenerCuentaPorNumero(
+            @Valid @RequestBody CuentaNumeroRequest request) {
+        CuentaResponse cuenta = cuentaService.obtenerCuentaPorNumero(request.getNumeroCuenta());
         return ResponseEntity.ok(ApiResponse.of(ApiResponseEnum.OK, cuenta));
     }
 
-    // Consultar cuentas con filtros opcionales (combinables)
-    @Operation(summary = "Consultar cuentas con filtros",
-            description = "Todos los parámetros son opcionales y combinables. Sin parámetros devuelve todas las cuentas. "
-                    + "'activas': true = solo cuentas ACTIVAS, false = solo cuentas no activas.")
-    @GetMapping(value = "/cuentas", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<ApiResponse<List<CuentaResponse>>> buscarCuentas(
-            @RequestParam(required = false) Long clienteId,
-            @RequestParam(required = false) Boolean activas) {
-        List<CuentaResponse> cuentas = cuentaService.buscarCuentas(clienteId, activas);
-        return ResponseEntity.ok(ApiResponse.of(ApiResponseEnum.OK, cuentas));
+    @Operation(summary = "Consultar cuentas con filtros (GET)",
+            description = "Todos los criterios son opcionales y combinables y se envían en el cuerpo (DTO). "
+                    + "'clienteId' filtra las cuentas de un cliente; 'activas': true = solo cuentas ACTIVAS, "
+                    + "false = solo no activas; 'estatus' filtra por estatus (ACTIVA/BLOQUEADA/INACTIVA/CANCELADA). "
+                    + "Sin cuerpo devuelve todas las cuentas paginadas.")
+    @GetMapping(value = "/cuentas/buscar", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<ApiResponse<PageResponse<CuentaResponse>>> buscarCuentas(
+            @Valid @RequestBody(required = false) CuentaSearchRequest request) {
+        CuentaSearchRequest filtro = request != null ? request : new CuentaSearchRequest();
+        Page<CuentaResponse> cuentas = cuentaService.buscarCuentas(filtro);
+        return ResponseEntity.ok(ApiResponse.of(ApiResponseEnum.OK, PageResponse.desde(cuentas)));
     }
 
     // Consultar saldo de una cuenta
-    @Operation(summary = "Consultar saldo de cuenta")
-    @GetMapping(value = "/cuentas/{numeroCuenta}/saldo", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<ApiResponse<java.math.BigDecimal>> consultarSaldo(@PathVariable String numeroCuenta) {
-        CuentaResponse cuenta = cuentaService.obtenerCuentaPorNumero(numeroCuenta);
+    @Operation(summary = "Consultar saldo de cuenta",
+            description = "Método GET con el número de cuenta enviado en el cuerpo (DTO).")
+    @GetMapping(value = "/cuentas/saldo", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<ApiResponse<BigDecimal>> consultarSaldo(
+            @Valid @RequestBody CuentaNumeroRequest request) {
+        CuentaResponse cuenta = cuentaService.obtenerCuentaPorNumero(request.getNumeroCuenta());
         return ResponseEntity.ok(ApiResponse.of(ApiResponseEnum.OK, cuenta.getSaldo()));
     }
 
     // Crear cuenta
     @Operation(summary = "Crear nueva cuenta bancaria")
-    @PostMapping(value = "/cuentas", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<ApiResponse<CuentaResponse>> crearCuenta(@RequestParam Long clienteId, @RequestParam(required = false) String numeroCuenta) {
-        CuentaResponse cuenta = cuentaService.crearCuenta(clienteId, numeroCuenta);
-        return new ResponseEntity<>(ApiResponse.of(ApiResponseEnum.OK, cuenta), HttpStatus.CREATED);
+    @PostMapping(value = "/cuentas/agregar", produces = MediaType.APPLICATION_JSON_VALUE,
+            consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<ApiResponse<CuentaResponse>> crearCuenta(
+            @Valid @RequestBody CuentaCreateRequest request) {
+        CuentaResponse cuenta = cuentaService.crearCuenta(request.getClienteId(), request.getNumeroCuenta());
+        return new ResponseEntity<>(ApiResponse.of(ApiResponseEnum.CREADO, cuenta), HttpStatus.CREATED);
     }
 
-    // Actualizar cuenta (parcial) - PUT según requisito académico
-    @Operation(summary = "Actualizar estatus de cuenta")
-    @PutMapping(value = "/cuentas/{numeroCuenta}", produces = MediaType.APPLICATION_JSON_VALUE, consumes = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<ApiResponse<CuentaResponse>> actualizarCuenta(@PathVariable String numeroCuenta, @Valid @RequestBody CuentaUpdateRequest request) {
-        CuentaResponse cuenta = cuentaService.actualizarCuenta(numeroCuenta, request);
+    // Actualizar cuenta (número, saldo o estatus) - PUT según requisito académico
+    @Operation(summary = "Actualizar cuenta (identificador por número de cuenta)")
+    @PutMapping(value = "/cuentas/actualizar", produces = MediaType.APPLICATION_JSON_VALUE,
+            consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<ApiResponse<CuentaResponse>> actualizarCuenta(
+            @Valid @RequestBody CuentaUpdateRequest request) {
+        CuentaResponse cuenta = cuentaService.actualizarCuenta(request.getNumeroCuenta(), request);
         return ResponseEntity.ok(ApiResponse.of(ApiResponseEnum.OK, cuenta));
     }
 }

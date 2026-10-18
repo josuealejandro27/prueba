@@ -3,6 +3,7 @@ package com.proyecto.servicios.exception;
 import com.proyecto.servicios.enums.ApiResponseEnum;
 import com.proyecto.servicios.model.ApiResponse;
 import feign.FeignException;
+import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -76,6 +77,18 @@ public class GlobalExceptionHandler {
                         .build());
     }
 
+    @ExceptionHandler(PersonaException.class)
+    public ResponseEntity<ApiResponse<Void>> manejarPersonaException(PersonaException ex) {
+        log.error("PersonaException [{}] - {}", ex.getCode(), ex.getMessage());
+        return ResponseEntity.status(ex.getHttpStatus())
+                .body(ApiResponse.<Void>builder()
+                        .code(ex.getCode())
+                        .message(ex.getMessage())
+                        .timestamp(LocalDateTime.now())
+                        .data(null)
+                        .build());
+    }
+
     @ExceptionHandler(ValidationException.class)
     public ResponseEntity<ApiResponse<Void>> manejarValidationException(ValidationException ex) {
         log.error("ValidationException [{}] - {}", ex.getCode(), ex.getMessage());
@@ -97,6 +110,21 @@ public class GlobalExceptionHandler {
             errores.put(campo, mensaje);
         });
         log.error("Errores de validación: {}", errores);
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(ApiResponse.<Map<String, String>>builder()
+                        .code("VALIDATION_ERROR")
+                        .message("Error de validación en los campos")
+                        .timestamp(LocalDateTime.now())
+                        .data(errores)
+                        .build());
+    }
+
+    @ExceptionHandler(ConstraintViolationException.class)
+    public ResponseEntity<ApiResponse<Map<String, String>>> manejarViolacionesDeRestriccion(ConstraintViolationException ex) {
+        Map<String, String> errores = new HashMap<>();
+        ex.getConstraintViolations().forEach(violacion ->
+                errores.put(violacion.getPropertyPath().toString(), violacion.getMessage()));
+        log.error("Errores de validación (constraints): {}", errores);
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(ApiResponse.<Map<String, String>>builder()
                         .code("VALIDATION_ERROR")

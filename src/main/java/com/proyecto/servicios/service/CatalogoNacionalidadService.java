@@ -1,20 +1,20 @@
 package com.proyecto.servicios.service;
 
-import com.proyecto.servicios.entity.catalogos.CatalogoNacionalidad;
-
-import java.util.List;
+import com.proyecto.servicios.model.catalogo.CatalogoNacionalidadActualizaRequest;
+import com.proyecto.servicios.model.catalogo.CatalogoNacionalidadRequest;
+import com.proyecto.servicios.model.catalogo.CatalogoNacionalidadResponse;
+import com.proyecto.servicios.model.catalogo.CatalogoNacionalidadSearchRequest;
+import org.springframework.data.domain.Page;
 
 public interface CatalogoNacionalidadService {
 
-    List<CatalogoNacionalidad> obtenerTodos();
+    CatalogoNacionalidadResponse obtenerPorId(Long id);
 
-    CatalogoNacionalidad obtenerPorId(Long id);
+    Page<CatalogoNacionalidadResponse> buscar(CatalogoNacionalidadSearchRequest filtros);
 
-    CatalogoNacionalidad crear(CatalogoNacionalidad catalogoNacionalidad);
+    CatalogoNacionalidadResponse crear(CatalogoNacionalidadRequest request);
 
-    CatalogoNacionalidad actualizar(Long id, CatalogoNacionalidad catalogoNacionalidad);
+    CatalogoNacionalidadResponse actualizar(CatalogoNacionalidadActualizaRequest request);
 
     void eliminar(Long id);
-
-    List<CatalogoNacionalidad> buscarPorNombre(String nombre);
 }
