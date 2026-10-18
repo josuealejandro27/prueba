@@ -18,6 +18,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -44,14 +45,14 @@ public class ClienteController {
     }
 
     @Operation(summary = "Buscar clientes con filtros (GET)",
-            description = "Todos los criterios son opcionales y combinables y se envían en el cuerpo (DTO). "
-                    + "Cubre las consultas por nombre, apellidos, CURP, RFC, correo, número de cuenta, "
-                    + "estado activo y rango de fechas. Sin cuerpo devuelve todos los clientes paginados.")
+            description = "Todos los criterios son opcionales y combinables y se envían como parámetros de consulta "
+                    + "(query params): ?nombre=...&curp=...&pagina=0&tamano=10. Cubre las consultas por nombre, "
+                    + "apellidos, CURP, RFC, correo, número de cuenta, estado activo y rango de fechas "
+                    + "(fechaInicio/fechaFin con formato yyyy-MM-dd). Sin parámetros devuelve todos los clientes paginados.")
     @GetMapping(value = "/clientes/buscar", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ApiResponse<PageResponse<ClienteResponse>>> buscarClientes(
-            @Valid @RequestBody(required = false) ClienteSearchRequest request) {
-        ClienteSearchRequest filtro = request != null ? request : new ClienteSearchRequest();
-        Page<ClienteResponse> page = clienteService.buscarClientes(filtro);
+            @Valid @ModelAttribute ClienteSearchRequest request) {
+        Page<ClienteResponse> page = clienteService.buscarClientes(request);
         return ResponseEntity.ok(ApiResponse.of(ApiResponseEnum.OK, PageResponse.desde(page)));
     }
 

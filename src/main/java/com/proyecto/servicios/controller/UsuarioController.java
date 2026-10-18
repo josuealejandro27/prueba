@@ -17,6 +17,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -43,14 +44,15 @@ public class UsuarioController {
     }
 
     @Operation(summary = "Consultar usuarios con filtros y paginación",
-            description = "Todos los criterios son opcionales y combinables. Sin criterios devuelve todos los usuarios. "
+            description = "Todos los criterios son opcionales y combinables y se envían como parámetros de consulta "
+                    + "(query params): ?correo=...&clienteId=...&activos=true&pagina=0&tamano=10. "
+                    + "Sin criterios devuelve todos los usuarios. "
                     + "'correo' aplica coincidencia parcial sin distinguir mayúsculas; 'activos': true = solo activos, false = solo inactivos. "
                     + "La paginación se controla con 'pagina' (base 0) y 'tamano'.")
     @GetMapping(value = "/usuarios/buscar", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ApiResponse<PageResponse<UsuarioResponse>>> buscarUsuarios(
-            @Valid @RequestBody(required = false) UsuarioSearchRequest request) {
-        UsuarioSearchRequest filtro = request != null ? request : new UsuarioSearchRequest();
-        Page<UsuarioResponse> usuarios = usuarioService.buscarUsuarios(filtro);
+            @Valid @ModelAttribute UsuarioSearchRequest request) {
+        Page<UsuarioResponse> usuarios = usuarioService.buscarUsuarios(request);
         return ResponseEntity.ok(ApiResponse.of(ApiResponseEnum.OK, PageResponse.desde(usuarios)));
     }
 

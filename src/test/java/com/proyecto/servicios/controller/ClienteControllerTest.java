@@ -34,7 +34,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 /**
  * Verifica el contrato HTTP del {@code ClienteController}: consultas y
- * búsquedas con método GET enviando el DTO por {@code @RequestBody}, altas en
+ * búsquedas con método GET enviando los criterios y la paginación como
+ * parámetros de consulta (query params, sin {@code @RequestParam}), altas en
  * POST y actualizaciones en PUT/PATCH, validación centralizada en el
  * {@code GlobalExceptionHandler} y ausencia de rutas con {@code @PathVariable}
  * o {@code @RequestParam}.
@@ -111,22 +112,23 @@ class ClienteControllerTest {
     @Test
     void buscarClientes_ConPaginacion_DevuelvePageResponse() throws Exception {
         when(clienteService.buscarClientes(any(ClienteSearchRequest.class)))
-                .thenReturn(new PageImpl<>(List.of(clienteResponse), PageRequest.of(0, 10), 1));
+                .thenReturn(new PageImpl<>(List.of(clienteResponse), PageRequest.of(1, 10), 21));
 
         mockMvc.perform(get("/clientes/buscar")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"curp\":\"PERJ900520HDFRPN09\",\"pagina\":0,\"tamano\":10}"))
+                        .param("curp", "PERJ900520HDFRPN09")
+                        .param("pagina", "1")
+                        .param("tamano", "10"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.contenido[0].curp").value("PERJ900520HDFRPN09"))
-                .andExpect(jsonPath("$.data.totalElementos").value(1))
-                .andExpect(jsonPath("$.data.pagina").value(0));
+                .andExpect(jsonPath("$.data.totalElementos").value(21))
+                .andExpect(jsonPath("$.data.pagina").value(1))
+                .andExpect(jsonPath("$.data.tamano").value(10));
     }
 
     @Test
     void buscarClientes_TamanoDePaginaInvalido_Devuelve400() throws Exception {
         mockMvc.perform(get("/clientes/buscar")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"tamano\":500}"))
+                        .param("tamano", "500"))
                 .andExpect(status().isBadRequest());
 
         verify(clienteService, never()).buscarClientes(any());

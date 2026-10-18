@@ -17,6 +17,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -42,13 +43,14 @@ public class CatalogoColoniaController {
     }
 
     @Operation(summary = "Buscar colonias con filtros",
-            description = "Todos los criterios son opcionales y combinables. Sin criterios devuelve todas las colonias. "
-                    + "'nombre' aplica coincidencia parcial sin distinguir mayúsculas.")
+            description = "Todos los criterios son opcionales y combinables y se envían como parámetros de consulta "
+                    + "(query params): ?nombre=...&municipioId=...&pagina=0&tamano=10. Sin parámetros devuelve todas "
+                    + "las colonias. 'nombre' aplica coincidencia parcial sin distinguir mayúsculas. "
+                    + "La paginación se controla con 'pagina' (base 0) y 'tamano'.")
     @GetMapping(value = "/catalogos/colonia/buscar", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ApiResponse<PageResponse<CatalogoColoniaResponse>>> buscar(
-            @Valid @RequestBody(required = false) CatalogoColoniaSearchRequest request) {
-        CatalogoColoniaSearchRequest filtros = request != null ? request : new CatalogoColoniaSearchRequest();
-        Page<CatalogoColoniaResponse> pagina = catalogoColoniaService.buscar(filtros);
+            @Valid @ModelAttribute CatalogoColoniaSearchRequest request) {
+        Page<CatalogoColoniaResponse> pagina = catalogoColoniaService.buscar(request);
         return ResponseEntity.ok(ApiResponse.of(ApiResponseEnum.OK, PageResponse.desde(pagina)));
     }
 
