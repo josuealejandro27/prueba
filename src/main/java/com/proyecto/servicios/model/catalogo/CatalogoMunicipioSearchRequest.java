@@ -18,8 +18,10 @@ public class CatalogoMunicipioSearchRequest extends PaginaRequest {
 
     /** Criterio de búsqueda parcial por nombre del municipio (no requiere el nombre completo). */
     @Size(max = 100, message = "El nombre del municipio no debe ser mayor a 100 caracteres")
+    @io.swagger.v3.oas.annotations.media.Schema(example = "Cuernavaca")
     private String nombre;
 
     @Positive(message = "El identificador del estado debe ser un valor positivo")
+    @io.swagger.v3.oas.annotations.media.Schema(example = "14")
     private Long estadoId;
 }

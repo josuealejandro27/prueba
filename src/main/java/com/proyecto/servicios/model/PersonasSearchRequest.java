@@ -18,13 +18,16 @@ public class PersonasSearchRequest extends PaginaRequest {
 
     /** Coincidencia parcial por nombre (no requiere el nombre completo). */
     @Size(max = 100, message = "El nombre no puede tener más de 100 caracteres")
+    @io.swagger.v3.oas.annotations.media.Schema(example = "Juan")
     private String nombre;
 
     /** Coincidencia parcial por apellido paterno. */
     @Size(max = 100, message = "El apellido paterno no puede tener más de 100 caracteres")
+    @io.swagger.v3.oas.annotations.media.Schema(example = "Pérez")
     private String apellidoP;
 
     /** Coincidencia parcial por apellido materno. */
     @Size(max = 100, message = "El apellido materno no puede tener más de 100 caracteres")
+    @io.swagger.v3.oas.annotations.media.Schema(example = "López")
     private String apellidoMaterno;
 }

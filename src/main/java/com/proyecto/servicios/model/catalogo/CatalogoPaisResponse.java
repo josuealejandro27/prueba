@@ -13,6 +13,9 @@ import lombok.Setter;
 @NoArgsConstructor
 public class CatalogoPaisResponse {
 
+    @io.swagger.v3.oas.annotations.media.Schema(example = "1")
     private Long id;
+
+    @io.swagger.v3.oas.annotations.media.Schema(example = "México")
     private String nombre;
 }

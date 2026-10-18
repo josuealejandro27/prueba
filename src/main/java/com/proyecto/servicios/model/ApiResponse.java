@@ -16,9 +16,15 @@ import java.time.LocalDateTime;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class ApiResponse<T> {
 
+    @io.swagger.v3.oas.annotations.media.Schema(example = "200", description = "Código del resultado de la operación")
     private final String code;
+
+    @io.swagger.v3.oas.annotations.media.Schema(example = "Operación exitosa", description = "Mensaje descriptivo del resultado")
     private final String message;
+
+    @io.swagger.v3.oas.annotations.media.Schema(example = "2026-01-15T10:30:00", description = "Fecha y hora del servidor en que se generó la respuesta")
     private final LocalDateTime timestamp;
+
     private final T data;
 
     public static <T> ApiResponse<T> of(ApiResponseEnum response, T data) {

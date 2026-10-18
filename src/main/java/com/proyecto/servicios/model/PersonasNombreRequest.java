@@ -17,5 +17,6 @@ public class PersonasNombreRequest {
 
     @NotBlank(message = "El nombre es obligatorio")
     @Size(max = 100, message = "El nombre no puede tener más de 100 caracteres")
+    @io.swagger.v3.oas.annotations.media.Schema(example = "Juan")
     private String nombre;
 }

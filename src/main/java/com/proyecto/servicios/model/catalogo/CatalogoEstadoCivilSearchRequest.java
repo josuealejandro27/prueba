@@ -17,5 +17,6 @@ public class CatalogoEstadoCivilSearchRequest extends PaginaRequest {
 
     /** Criterio de búsqueda parcial por nombre del estado civil. */
     @Size(max = 100, message = "El nombre del estado civil no puede tener más de 100 caracteres")
+    @io.swagger.v3.oas.annotations.media.Schema(example = "Soltero")
     private String nombre;
 }

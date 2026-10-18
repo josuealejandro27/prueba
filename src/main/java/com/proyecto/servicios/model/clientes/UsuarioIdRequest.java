@@ -17,5 +17,6 @@ public class UsuarioIdRequest {
 
     @NotNull(message = "El identificador del usuario es obligatorio")
     @Positive(message = "El identificador del usuario debe ser un valor positivo")
+    @io.swagger.v3.oas.annotations.media.Schema(example = "1")
     private Long id;
 }

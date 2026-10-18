@@ -17,5 +17,6 @@ public class CuentaNumeroRequest {
 
     @NotBlank(message = "El número de cuenta es obligatorio")
     @Size(max = 30, message = "El número de cuenta no puede tener más de 30 caracteres")
+    @io.swagger.v3.oas.annotations.media.Schema(example = "012345678901234567")
     private String numeroCuenta;
 }

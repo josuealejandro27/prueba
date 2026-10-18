@@ -17,5 +17,6 @@ public class CatalogoNacionalidadSearchRequest extends PaginaRequest {
 
     /** Criterio de búsqueda parcial por nombre de la nacionalidad. */
     @Size(max = 100, message = "El nombre de la nacionalidad no puede tener más de 100 caracteres")
+    @io.swagger.v3.oas.annotations.media.Schema(example = "Mexicana")
     private String nombre;
 }

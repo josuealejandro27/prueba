@@ -17,5 +17,6 @@ public class ClienteIdRequest {
 
     @NotNull(message = "El identificador del cliente es obligatorio")
     @Positive(message = "El identificador del cliente debe ser un valor positivo")
+    @io.swagger.v3.oas.annotations.media.Schema(example = "1")
     private Long id;
 }
