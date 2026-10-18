@@ -17,6 +17,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -42,12 +43,14 @@ public class CatalogoNacionalidadController {
     }
 
     @Operation(summary = "Consultar nacionalidades con filtros",
-            description = "Todos los criterios son opcionales y combinables. Sin criterios devuelve todas las nacionalidades.")
+            description = "Todos los criterios son opcionales y combinables y se envían como parámetros de consulta "
+                    + "(query params): ?nombre=...&pagina=0&tamano=10. Sin parámetros devuelve todas las nacionalidades. "
+                    + "'nombre' aplica coincidencia parcial sin distinguir mayúsculas. "
+                    + "La paginación se controla con 'pagina' (base 0) y 'tamano'.")
     @GetMapping(value = "/catalogos/nacionalidad/buscar", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ApiResponse<PageResponse<CatalogoNacionalidadResponse>>> buscar(
-            @Valid @RequestBody(required = false) CatalogoNacionalidadSearchRequest request) {
-        CatalogoNacionalidadSearchRequest filtros = request != null ? request : new CatalogoNacionalidadSearchRequest();
-        Page<CatalogoNacionalidadResponse> nacionalidades = catalogoNacionalidadService.buscar(filtros);
+            @Valid @ModelAttribute CatalogoNacionalidadSearchRequest request) {
+        Page<CatalogoNacionalidadResponse> nacionalidades = catalogoNacionalidadService.buscar(request);
         return ResponseEntity.ok(ApiResponse.of(ApiResponseEnum.OK, PageResponse.desde(nacionalidades)));
     }
 

@@ -17,6 +17,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -42,12 +43,14 @@ public class CatalogoGeneroController {
     }
 
     @Operation(summary = "Consultar géneros con filtros",
-            description = "Todos los criterios son opcionales y combinables. Sin criterios devuelve todos los géneros.")
+            description = "Todos los criterios son opcionales y combinables y se envían como parámetros de consulta "
+                    + "(query params): ?tipo=...&pagina=0&tamano=10. Sin parámetros devuelve todos los géneros. "
+                    + "'tipo' aplica coincidencia parcial sin distinguir mayúsculas. "
+                    + "La paginación se controla con 'pagina' (base 0) y 'tamano'.")
     @GetMapping(value = "/catalogos/genero/buscar", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ApiResponse<PageResponse<CatalogoGeneroResponse>>> buscar(
-            @Valid @RequestBody(required = false) CatalogoGeneroSearchRequest request) {
-        CatalogoGeneroSearchRequest filtros = request != null ? request : new CatalogoGeneroSearchRequest();
-        Page<CatalogoGeneroResponse> generos = catalogoGeneroService.buscar(filtros);
+            @Valid @ModelAttribute CatalogoGeneroSearchRequest request) {
+        Page<CatalogoGeneroResponse> generos = catalogoGeneroService.buscar(request);
         return ResponseEntity.ok(ApiResponse.of(ApiResponseEnum.OK, PageResponse.desde(generos)));
     }
 

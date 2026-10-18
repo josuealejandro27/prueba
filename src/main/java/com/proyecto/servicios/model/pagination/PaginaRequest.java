@@ -11,7 +11,9 @@ import org.springframework.data.domain.Pageable;
 /**
  * Parámetros comunes de paginación para las consultas.
  * {@code pagina} es base 0 (0 = primera página) y {@code tamano} es el número de
- * elementos por página. Ambos son configurables por el cliente en cada petición.
+ * elementos por página. Ambos se envían como parámetros de consulta (query params)
+ * junto con los filtros, por ejemplo: {@code ?pagina=1&tamano=10}, y son
+ * configurables por el cliente en cada petición.
  */
 @Getter
 @Setter

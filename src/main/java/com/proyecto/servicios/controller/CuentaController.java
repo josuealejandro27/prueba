@@ -17,6 +17,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -46,15 +47,15 @@ public class CuentaController {
     }
 
     @Operation(summary = "Consultar cuentas con filtros (GET)",
-            description = "Todos los criterios son opcionales y combinables y se envían en el cuerpo (DTO). "
+            description = "Todos los criterios son opcionales y combinables y se envían como parámetros de consulta "
+                    + "(query params): ?clienteId=...&activas=true&estatus=ACTIVA&pagina=0&tamano=10. "
                     + "'clienteId' filtra las cuentas de un cliente; 'activas': true = solo cuentas ACTIVAS, "
                     + "false = solo no activas; 'estatus' filtra por estatus (ACTIVA/BLOQUEADA/INACTIVA/CANCELADA). "
-                    + "Sin cuerpo devuelve todas las cuentas paginadas.")
+                    + "Sin parámetros devuelve todas las cuentas paginadas.")
     @GetMapping(value = "/cuentas/buscar", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ApiResponse<PageResponse<CuentaResponse>>> buscarCuentas(
-            @Valid @RequestBody(required = false) CuentaSearchRequest request) {
-        CuentaSearchRequest filtro = request != null ? request : new CuentaSearchRequest();
-        Page<CuentaResponse> cuentas = cuentaService.buscarCuentas(filtro);
+            @Valid @ModelAttribute CuentaSearchRequest request) {
+        Page<CuentaResponse> cuentas = cuentaService.buscarCuentas(request);
         return ResponseEntity.ok(ApiResponse.of(ApiResponseEnum.OK, PageResponse.desde(cuentas)));
     }
 

@@ -127,10 +127,9 @@ class UsuarioControllerTest {
     }
 
     @Test
-    void buscarUsuarios_CuerpoInvalido_Devuelve400() throws Exception {
+    void buscarUsuarios_ParametroInvalido_Devuelve400() throws Exception {
         mockMvc.perform(get("/usuarios/buscar")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"clienteId\":-5}"))
+                        .param("clienteId", "-5"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
 
@@ -143,16 +142,22 @@ class UsuarioControllerTest {
                 .thenReturn(new PageImpl<>(List.of(usuarioResponse)));
 
         mockMvc.perform(get("/usuarios/buscar")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"correo\":\"juan\",\"clienteId\":1,\"activos\":true}"))
+                        .param("correo", "juan")
+                        .param("clienteId", "1")
+                        .param("activos", "true")
+                        .param("pagina", "0")
+                        .param("tamano", "10"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.contenido[0].correo").value("juan@email.com"));
+                .andExpect(jsonPath("$.data.contenido[0].correo").value("juan@email.com"))
+                .andExpect(jsonPath("$.data.pagina").value(0));
 
         ArgumentCaptor<UsuarioSearchRequest> captor = ArgumentCaptor.forClass(UsuarioSearchRequest.class);
         verify(usuarioService).buscarUsuarios(captor.capture());
         assertEquals("juan", captor.getValue().getCorreo());
         assertEquals(1L, captor.getValue().getClienteId());
         assertTrue(captor.getValue().getActivos());
+        assertEquals(0, captor.getValue().getPagina());
+        assertEquals(10, captor.getValue().getTamano());
     }
 
     @Test
@@ -160,9 +165,7 @@ class UsuarioControllerTest {
         when(usuarioService.buscarUsuarios(any(UsuarioSearchRequest.class)))
                 .thenReturn(new PageImpl<>(List.of(usuarioResponse)));
 
-        mockMvc.perform(get("/usuarios/buscar")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{}"))
+        mockMvc.perform(get("/usuarios/buscar"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.contenido.length()").value(1));
     }

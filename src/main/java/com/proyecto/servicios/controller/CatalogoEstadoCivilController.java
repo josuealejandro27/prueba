@@ -17,6 +17,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -42,12 +43,14 @@ public class CatalogoEstadoCivilController {
     }
 
     @Operation(summary = "Consultar estados civiles con filtros",
-            description = "Todos los criterios son opcionales y combinables. Sin criterios devuelve todos los estados civiles.")
+            description = "Todos los criterios son opcionales y combinables y se envían como parámetros de consulta "
+                    + "(query params): ?nombre=...&pagina=0&tamano=10. Sin parámetros devuelve todos los estados civiles. "
+                    + "'nombre' aplica coincidencia parcial sin distinguir mayúsculas. "
+                    + "La paginación se controla con 'pagina' (base 0) y 'tamano'.")
     @GetMapping(value = "/catalogos/estado-civil/buscar", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ApiResponse<PageResponse<CatalogoEstadoCivilResponse>>> buscar(
-            @Valid @RequestBody(required = false) CatalogoEstadoCivilSearchRequest request) {
-        CatalogoEstadoCivilSearchRequest filtros = request != null ? request : new CatalogoEstadoCivilSearchRequest();
-        Page<CatalogoEstadoCivilResponse> estadosCiviles = catalogoEstadoCivilService.buscar(filtros);
+            @Valid @ModelAttribute CatalogoEstadoCivilSearchRequest request) {
+        Page<CatalogoEstadoCivilResponse> estadosCiviles = catalogoEstadoCivilService.buscar(request);
         return ResponseEntity.ok(ApiResponse.of(ApiResponseEnum.OK, PageResponse.desde(estadosCiviles)));
     }
 

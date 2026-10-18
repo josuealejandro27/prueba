@@ -46,7 +46,8 @@ public class PersonaController {
     }
 
     @Operation(summary = "Consultar personas con filtros y paginación",
-            description = "Todos los criterios son opcionales y combinables. Sin criterios devuelve todas las personas. "
+            description = "Todos los criterios son opcionales y combinables y se envían como parámetros de consulta "
+                    + "(query params): ?nombre=...&apellidoP=...&pagina=0&tamano=10. Sin criterios devuelve todas las personas. "
                     + "'nombre', 'apellidoP' y 'apellidoMaterno' aplican coincidencia parcial sin distinguir mayúsculas. "
                     + "La paginación se controla con 'pagina' (base 0) y 'tamano'.")
     @GetMapping(value = "/personas/buscar", produces = MediaType.APPLICATION_JSON_VALUE)
