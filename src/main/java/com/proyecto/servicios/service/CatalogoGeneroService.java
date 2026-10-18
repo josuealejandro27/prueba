@@ -1,20 +1,20 @@
 package com.proyecto.servicios.service;
 
-import com.proyecto.servicios.entity.catalogos.CatalogoGeneros;
-
-import java.util.List;
+import com.proyecto.servicios.model.catalogo.CatalogoGeneroActualizaRequest;
+import com.proyecto.servicios.model.catalogo.CatalogoGeneroRequest;
+import com.proyecto.servicios.model.catalogo.CatalogoGeneroResponse;
+import com.proyecto.servicios.model.catalogo.CatalogoGeneroSearchRequest;
+import org.springframework.data.domain.Page;
 
 public interface CatalogoGeneroService {
 
-    List<CatalogoGeneros> obtenerTodos();
+    CatalogoGeneroResponse obtenerPorId(Long id);
 
-    CatalogoGeneros obtenerPorId(Long id);
+    Page<CatalogoGeneroResponse> buscar(CatalogoGeneroSearchRequest filtros);
 
-    CatalogoGeneros crear(CatalogoGeneros catalogoGeneros);
+    CatalogoGeneroResponse crear(CatalogoGeneroRequest request);
 
-    CatalogoGeneros actualizar(Long id, CatalogoGeneros catalogoGeneros);
+    CatalogoGeneroResponse actualizar(CatalogoGeneroActualizaRequest request);
 
     void eliminar(Long id);
-
-    List<CatalogoGeneros> buscarPorTipo(String tipo);
 }

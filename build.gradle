@@ -111,6 +111,13 @@ ext {
 
 test {
     useJUnitPlatform()
+    // Permite apuntar las pruebas de integración a una base de datos real:
+    //   -Dtest.db.url=jdbc:postgresql://localhost:5432/usuarios_e2e -Dtest.db.user=... etc.
+    ['test.db.url', 'test.db.user', 'test.db.password', 'test.db.driver', 'test.db.dialect'].each { clave ->
+        if (System.getProperty(clave) != null) {
+            systemProperty clave, System.getProperty(clave)
+        }
+    }
 }
 
 springBoot {

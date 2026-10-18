@@ -2,19 +2,27 @@ package com.proyecto.servicios.controller;
 
 import com.proyecto.servicios.enums.ApiResponseEnum;
 import com.proyecto.servicios.model.ApiResponse;
-import com.proyecto.servicios.model.clientes.*;
+import com.proyecto.servicios.model.clientes.ClienteActualizaRequest;
+import com.proyecto.servicios.model.clientes.ClienteBloqueoRequest;
+import com.proyecto.servicios.model.clientes.ClienteIdRequest;
+import com.proyecto.servicios.model.clientes.ClienteRequest;
+import com.proyecto.servicios.model.clientes.ClienteResponse;
+import com.proyecto.servicios.model.clientes.ClienteSearchRequest;
+import com.proyecto.servicios.model.pagination.PageResponse;
 import com.proyecto.servicios.service.ClienteService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-
-import java.util.Date;
-import java.util.List;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RestController;
 
 @Tag(name = "Gestión de Clientes", description = "Endpoints para la gestión de clientes bancarios")
 @RestController
@@ -26,149 +34,72 @@ public class ClienteController {
         this.clienteService = clienteService;
     }
 
-    // Crear cliente
+    @Operation(summary = "Consultar cliente por ID",
+            description = "Método GET con el identificador enviado en el cuerpo (DTO) para respetar la "
+                    + "restricción de no usar @PathVariable ni @RequestParam.")
+    @GetMapping(value = "/clientes/consultar", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<ApiResponse<ClienteResponse>> obtenerCliente(@Valid @RequestBody ClienteIdRequest request) {
+        ClienteResponse cliente = clienteService.obtenerCliente(request.getId());
+        return ResponseEntity.ok(ApiResponse.of(ApiResponseEnum.OK, cliente));
+    }
+
+    @Operation(summary = "Buscar clientes con filtros (GET)",
+            description = "Todos los criterios son opcionales y combinables y se envían en el cuerpo (DTO). "
+                    + "Cubre las consultas por nombre, apellidos, CURP, RFC, correo, número de cuenta, "
+                    + "estado activo y rango de fechas. Sin cuerpo devuelve todos los clientes paginados.")
+    @GetMapping(value = "/clientes/buscar", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<ApiResponse<PageResponse<ClienteResponse>>> buscarClientes(
+            @Valid @RequestBody(required = false) ClienteSearchRequest request) {
+        ClienteSearchRequest filtro = request != null ? request : new ClienteSearchRequest();
+        Page<ClienteResponse> page = clienteService.buscarClientes(filtro);
+        return ResponseEntity.ok(ApiResponse.of(ApiResponseEnum.OK, PageResponse.desde(page)));
+    }
+
     @Operation(summary = "Registrar cliente bancario")
-    @PostMapping(value = "/clientes", produces = MediaType.APPLICATION_JSON_VALUE, consumes = MediaType.APPLICATION_JSON_VALUE)
+    @PostMapping(value = "/clientes/agregar", produces = MediaType.APPLICATION_JSON_VALUE,
+            consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ApiResponse<ClienteResponse>> crearCliente(@Valid @RequestBody ClienteRequest request) {
         ClienteResponse cliente = clienteService.crearCliente(request);
-        return new ResponseEntity<>(ApiResponse.of(ApiResponseEnum.OK, cliente), HttpStatus.CREATED);
+        return new ResponseEntity<>(ApiResponse.of(ApiResponseEnum.CREADO, cliente), HttpStatus.CREATED);
     }
 
-    // Actualizar cliente (parcial) - PUT según requisito académico
-    @Operation(summary = "Actualizar cliente")
-    @PutMapping(value = "/clientes/{id}", produces = MediaType.APPLICATION_JSON_VALUE, consumes = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<ApiResponse<ClienteResponse>> actualizarCliente(@PathVariable Long id, @Valid @RequestBody ClienteUpdateRequest request) {
-        ClienteResponse cliente = clienteService.actualizarCliente(id, request);
+    @Operation(summary = "Actualizar cliente (parcial)")
+    @PutMapping(value = "/clientes/actualizar", produces = MediaType.APPLICATION_JSON_VALUE,
+            consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<ApiResponse<ClienteResponse>> actualizarCliente(@Valid @RequestBody ClienteActualizaRequest request) {
+        ClienteResponse cliente = clienteService.actualizarCliente(request);
         return ResponseEntity.ok(ApiResponse.of(ApiResponseEnum.OK, cliente));
     }
 
-    // Consultar todos los clientes
-    @Operation(summary = "Consultar clientes con filtros")
-    @GetMapping(value = "/clientes", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<ApiResponse<List<ClienteResponse>>> obtenerTodos() {
-        List<ClienteResponse> clientes = clienteService.obtenerTodos();
-        return ResponseEntity.ok(ApiResponse.of(ApiResponseEnum.OK, clientes));
-    }
-
-    // Consultar cliente por ID
-    @Operation(summary = "Obtener cliente por ID")
-    @GetMapping(value = "/clientes/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<ApiResponse<ClienteResponse>> obtenerCliente(@PathVariable Long id) {
-        ClienteResponse cliente = clienteService.obtenerCliente(id);
+    @Operation(summary = "Desactivar cliente (baja lógica)")
+    @PatchMapping(value = "/clientes/desactivar", produces = MediaType.APPLICATION_JSON_VALUE,
+            consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<ApiResponse<ClienteResponse>> desactivarCliente(@Valid @RequestBody ClienteIdRequest request) {
+        ClienteResponse cliente = clienteService.desactivarCliente(request.getId());
         return ResponseEntity.ok(ApiResponse.of(ApiResponseEnum.OK, cliente));
     }
 
-    // Buscar cliente por CURP
-    @Operation(summary = "Buscar cliente por CURP")
-    @GetMapping(value = "/clientes", params = "curp", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<ApiResponse<ClienteResponse>> obtenerClientePorCurp(@RequestParam(required = false) String curp) {
-        ClienteResponse cliente = clienteService.obtenerClientePorCurp(curp);
-        return ResponseEntity.ok(ApiResponse.of(ApiResponseEnum.OK, cliente));
-    }
-
-    // Buscar cliente por RFC
-    @Operation(summary = "Buscar cliente por RFC")
-    @GetMapping(value = "/clientes", params = "rfc", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<ApiResponse<ClienteResponse>> obtenerClientePorRfc(@RequestParam(required = false) String rfc) {
-        ClienteResponse cliente = clienteService.obtenerClientePorRfc(rfc);
-        return ResponseEntity.ok(ApiResponse.of(ApiResponseEnum.OK, cliente));
-    }
-
-    // Buscar cliente por correo
-    @Operation(summary = "Buscar cliente por correo")
-    @GetMapping(value = "/clientes", params = "correo", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<ApiResponse<ClienteResponse>> obtenerClientePorCorreo(@RequestParam(required = false) String correo) {
-        ClienteResponse cliente = clienteService.obtenerClientePorCorreo(correo);
-        return ResponseEntity.ok(ApiResponse.of(ApiResponseEnum.OK, cliente));
-    }
-
-    // Buscar cliente por número de cuenta
-    @Operation(summary = "Buscar cliente por número de cuenta")
-    @GetMapping(value = "/clientes", params = "numeroCuenta", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<ApiResponse<ClienteResponse>> obtenerClientePorNumeroCuenta(@RequestParam(required = false) String numeroCuenta) {
-        ClienteResponse cliente = clienteService.obtenerClientePorNumeroCuenta(numeroCuenta);
-        return ResponseEntity.ok(ApiResponse.of(ApiResponseEnum.OK, cliente));
-    }
-
-    // Buscar clientes por nombre
-    @Operation(summary = "Buscar clientes por nombre")
-    @GetMapping(value = "/clientes", params = "nombre", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<ApiResponse<List<ClienteResponse>>> buscarPorNombre(@RequestParam(required = false) String nombre) {
-        List<ClienteResponse> clientes = clienteService.buscarPorNombre(nombre);
-        return ResponseEntity.ok(ApiResponse.of(ApiResponseEnum.OK, clientes));
-    }
-
-    // Buscar clientes por apellido paterno
-    @Operation(summary = "Buscar clientes por apellido paterno")
-    @GetMapping(value = "/clientes", params = "apellidoPaterno", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<ApiResponse<List<ClienteResponse>>> buscarPorApellidoPaterno(@RequestParam(required = false) String apellidoPaterno) {
-        List<ClienteResponse> clientes = clienteService.buscarPorApellidoPaterno(apellidoPaterno);
-        return ResponseEntity.ok(ApiResponse.of(ApiResponseEnum.OK, clientes));
-    }
-
-    // Buscar clientes por apellido materno
-    @Operation(summary = "Buscar clientes por apellido materno")
-    @GetMapping(value = "/clientes", params = "apellidoMaterno", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<ApiResponse<List<ClienteResponse>>> buscarPorApellidoMaterno(@RequestParam(required = false) String apellidoMaterno) {
-        List<ClienteResponse> clientes = clienteService.buscarPorApellidoMaterno(apellidoMaterno);
-        return ResponseEntity.ok(ApiResponse.of(ApiResponseEnum.OK, clientes));
-    }
-
-    // Consultar clientes activos
-    @Operation(summary = "Consultar clientes activos")
-    @GetMapping(value = "/clientes", params = "activos", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<ApiResponse<List<ClienteResponse>>> obtenerClientesActivos(@RequestParam(required = false) boolean activos) {
-        List<ClienteResponse> clientes = clienteService.obtenerClientesActivos();
-        return ResponseEntity.ok(ApiResponse.of(ApiResponseEnum.OK, clientes));
-    }
-
-    // Consultar clientes por rango de fechas
-    @Operation(summary = "Consultar clientes por rango de fechas")
-    @GetMapping(value = "/clientes", params = {"fechaInicio", "fechaFin"}, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<ApiResponse<List<ClienteResponse>>> obtenerClientesPorRangoFechas(
-            @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") Date fechaInicio,
-            @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") Date fechaFin) {
-        List<ClienteResponse> clientes = clienteService.obtenerClientesPorRangoFechas(fechaInicio, fechaFin);
-        return ResponseEntity.ok(ApiResponse.of(ApiResponseEnum.OK, clientes));
-    }
-
-    // Bloquear/desbloquear cuenta
-    @Operation(summary = "Bloquear/desbloquear cuenta")
-    @PatchMapping(value = "/clientes/{id}/bloqueo-cuenta", produces = MediaType.APPLICATION_JSON_VALUE, consumes = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<ApiResponse<ClienteResponse>> bloquearCuenta(@PathVariable Long id, @Valid @RequestBody BloqueoRequest request) {
-        ClienteResponse cliente = clienteService.bloquearCuenta(id, request.isBloqueado());
-        return ResponseEntity.ok(ApiResponse.of(ApiResponseEnum.OK, cliente));
-    }
-
-    // Bloquear/desbloquear login
-    @Operation(summary = "Bloquear/desbloquear login")
-    @PatchMapping(value = "/clientes/{id}/bloqueo-login", produces = MediaType.APPLICATION_JSON_VALUE, consumes = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<ApiResponse<ClienteResponse>> bloquearLogin(@PathVariable Long id, @Valid @RequestBody BloqueoRequest request) {
-        ClienteResponse cliente = clienteService.bloquearLogin(id, request.isBloqueado());
-        return ResponseEntity.ok(ApiResponse.of(ApiResponseEnum.OK, cliente));
-    }
-
-    // Desactivar cliente (baja lógica)
-    @Operation(summary = "Baja lógica de cliente")
-    @PatchMapping(value = "/clientes/{id}/desactivar", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<ApiResponse<ClienteResponse>> desactivarCliente(@PathVariable Long id) {
-        ClienteResponse cliente = clienteService.desactivarCliente(id);
-        return ResponseEntity.ok(ApiResponse.of(ApiResponseEnum.OK, cliente));
-    }
-
-    // Activar cliente
     @Operation(summary = "Activar cliente")
-    @PatchMapping(value = "/clientes/{id}/activar", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<ApiResponse<ClienteResponse>> activarCliente(@PathVariable Long id) {
-        ClienteResponse cliente = clienteService.activarCliente(id);
+    @PatchMapping(value = "/clientes/activar", produces = MediaType.APPLICATION_JSON_VALUE,
+            consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<ApiResponse<ClienteResponse>> activarCliente(@Valid @RequestBody ClienteIdRequest request) {
+        ClienteResponse cliente = clienteService.activarCliente(request.getId());
         return ResponseEntity.ok(ApiResponse.of(ApiResponseEnum.OK, cliente));
     }
 
-    // DELETE /clientes/{id} -> baja lógica (requisito del API objetivo)
-    @Operation(summary = "Eliminar cliente (baja lógica)")
-    @DeleteMapping(value = "/clientes/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<ApiResponse<ClienteResponse>> eliminarCliente(@PathVariable Long id) {
-        ClienteResponse cliente = clienteService.desactivarCliente(id);
+    @Operation(summary = "Bloquear/desbloquear cuenta")
+    @PatchMapping(value = "/clientes/bloquear-cuenta", produces = MediaType.APPLICATION_JSON_VALUE,
+            consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<ApiResponse<ClienteResponse>> bloquearCuenta(@Valid @RequestBody ClienteBloqueoRequest request) {
+        ClienteResponse cliente = clienteService.bloquearCuenta(request.getId(), request.getBloqueado());
+        return ResponseEntity.ok(ApiResponse.of(ApiResponseEnum.OK, cliente));
+    }
+
+    @Operation(summary = "Bloquear/desbloquear login")
+    @PatchMapping(value = "/clientes/bloquear-login", produces = MediaType.APPLICATION_JSON_VALUE,
+            consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<ApiResponse<ClienteResponse>> bloquearLogin(@Valid @RequestBody ClienteBloqueoRequest request) {
+        ClienteResponse cliente = clienteService.bloquearLogin(request.getId(), request.getBloqueado());
         return ResponseEntity.ok(ApiResponse.of(ApiResponseEnum.OK, cliente));
     }
 }

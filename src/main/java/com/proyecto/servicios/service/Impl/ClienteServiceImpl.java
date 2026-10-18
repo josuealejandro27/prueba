@@ -4,16 +4,23 @@ import com.proyecto.servicios.entity.catalogos.*;
 import com.proyecto.servicios.entity.clientes.*;
 import com.proyecto.servicios.exception.ClienteException;
 import com.proyecto.servicios.exception.ValidationException;
+import com.proyecto.servicios.model.clientes.ClienteActualizaRequest;
 import com.proyecto.servicios.model.clientes.ClienteRequest;
 import com.proyecto.servicios.model.clientes.ClienteResponse;
-import com.proyecto.servicios.model.clientes.ClienteUpdateRequest;
+import com.proyecto.servicios.model.clientes.ClienteSearchRequest;
 import com.proyecto.servicios.repositorys.catalogos.*;
 import com.proyecto.servicios.repositorys.clientes.CuentaBancariaRepository;
 import com.proyecto.servicios.repositorys.clientes.PersonaFisicaRepository;
 import com.proyecto.servicios.repositorys.clientes.UsuarioRepository;
 import com.proyecto.servicios.service.ClienteService;
+import jakarta.persistence.criteria.Root;
+import jakarta.persistence.criteria.Subquery;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -85,6 +92,11 @@ public class ClienteServiceImpl implements ClienteService {
         // Validar que no exista otro cliente con el mismo correo
         if (personaFisicaRepository.existsByCorreo(request.getCorreo())) {
             throw new ClienteException(CODIGO_CLIENTE, "Ya existe un cliente con el correo: " + request.getCorreo(), HttpStatus.CONFLICT);
+        }
+
+        // Validar que no exista otro cliente con la misma combinación RFC + CURP
+        if (personaFisicaRepository.findByRfcAndCurp(rfcNormalizado, curpNormalizada).isPresent()) {
+            throw new ClienteException(CODIGO_CLIENTE, "Ya existe un cliente con el RFC y CURP indicados", HttpStatus.CONFLICT);
         }
 
         // Crear PersonaFísica
@@ -166,7 +178,8 @@ public class ClienteServiceImpl implements ClienteService {
 
     @Override
     @Transactional
-    public ClienteResponse actualizarCliente(Long id, ClienteUpdateRequest request) {
+    public ClienteResponse actualizarCliente(ClienteActualizaRequest request) {
+        Long id = request.getId();
         log.info("Actualizando cliente con ID: {}", id);
 
         PersonaFisica personaFisica = personaFisicaRepository.findById(id)
@@ -294,91 +307,76 @@ public class ClienteServiceImpl implements ClienteService {
 
     @Override
     @Transactional(readOnly = true)
-    public ClienteResponse obtenerClientePorCurp(String curp) {
-        log.info("Consultando cliente con CURP: {}", curp);
+    public Page<ClienteResponse> buscarClientes(ClienteSearchRequest filtros) {
+        log.info("Buscando clientes con filtros combinables");
 
-        PersonaFisica personaFisica = personaFisicaRepository.findByCurp(curp)
-                .orElseThrow(() -> new ClienteException(CODIGO_CLIENTE, "Cliente no encontrado con CURP: " + curp, HttpStatus.NOT_FOUND));
+        Specification<PersonaFisica> spec = Specification.where(null);
 
-        return mapToResponse(personaFisica, obtenerCuentaPrincipal(personaFisica.getId()));
-    }
+        if (filtros.getCurp() != null) {
+            String curp = filtros.getCurp().trim().toUpperCase();
+            spec = spec.and((root, query, cb) -> cb.equal(root.get("curp"), curp));
+        }
+        if (filtros.getRfc() != null) {
+            String rfc = filtros.getRfc().trim().toUpperCase();
+            spec = spec.and((root, query, cb) -> cb.equal(root.get("rfc"), rfc));
+        }
+        if (filtros.getCorreo() != null) {
+            String correo = "%" + filtros.getCorreo().toLowerCase().trim() + "%";
+            spec = spec.and((root, query, cb) -> cb.like(cb.lower(root.get("correo")), correo));
+        }
+        if (filtros.getNombre() != null) {
+            String nombre = "%" + filtros.getNombre().toLowerCase().trim() + "%";
+            spec = spec.and((root, query, cb) -> cb.like(cb.lower(root.get("nombre")), nombre));
+        }
+        if (filtros.getApellidoPaterno() != null) {
+            String apellidoPaterno = "%" + filtros.getApellidoPaterno().toLowerCase().trim() + "%";
+            spec = spec.and((root, query, cb) -> cb.like(cb.lower(root.get("apellidoPaterno")), apellidoPaterno));
+        }
+        if (filtros.getApellidoMaterno() != null) {
+            String apellidoMaterno = "%" + filtros.getApellidoMaterno().toLowerCase().trim() + "%";
+            spec = spec.and((root, query, cb) -> cb.like(cb.lower(root.get("apellidoMaterno")), apellidoMaterno));
+        }
+        if (Boolean.TRUE.equals(filtros.getActivo())) {
+            spec = spec.and((root, query, cb) -> cb.isTrue(root.get("activo")));
+        } else if (Boolean.FALSE.equals(filtros.getActivo())) {
+            spec = spec.and((root, query, cb) -> cb.isFalse(root.get("activo")));
+        }
+        if (Boolean.TRUE.equals(filtros.getCuentaBloqueada())) {
+            spec = spec.and((root, query, cb) -> cb.isTrue(root.get("cuentaBloqueada")));
+        } else if (Boolean.FALSE.equals(filtros.getCuentaBloqueada())) {
+            spec = spec.and((root, query, cb) -> cb.isFalse(root.get("cuentaBloqueada")));
+        }
+        if (Boolean.TRUE.equals(filtros.getLoginBloqueado())) {
+            spec = spec.and((root, query, cb) -> cb.isTrue(root.get("loginBloqueado")));
+        } else if (Boolean.FALSE.equals(filtros.getLoginBloqueado())) {
+            spec = spec.and((root, query, cb) -> cb.isFalse(root.get("loginBloqueado")));
+        }
+        if (filtros.getFechaInicio() != null) {
+            Date fechaInicio = filtros.getFechaInicio();
+            spec = spec.and((root, query, cb) ->
+                    cb.greaterThanOrEqualTo(root.get("fechaCreacion"), fechaInicio));
+        }
+        if (filtros.getFechaFin() != null) {
+            Date fechaFin = filtros.getFechaFin();
+            spec = spec.and((root, query, cb) ->
+                    cb.lessThanOrEqualTo(root.get("fechaCreacion"), fechaFin));
+        }
+        if (filtros.getNumeroCuenta() != null) {
+            String numeroCuenta = filtros.getNumeroCuenta().trim();
+            spec = spec.and((root, query, cb) -> {
+                Subquery<Long> sub = query.subquery(Long.class);
+                Root<CuentaBancaria> cuenta = sub.from(CuentaBancaria.class);
+                sub.select(cuenta.get("personaFisica").get("id"));
+                sub.where(cb.equal(cuenta.get("numeroCuenta"), numeroCuenta));
+                return root.get("id").in(sub);
+            });
+        }
 
-    @Override
-    @Transactional(readOnly = true)
-    public ClienteResponse obtenerClientePorRfc(String rfc) {
-        log.info("Consultando cliente con RFC: {}", rfc);
+        Pageable pageable = filtros.aPageable();
+        Page<PersonaFisica> page = personaFisicaRepository.findAll(spec, pageable);
+        List<ClienteResponse> contenido = mapList(page.getContent());
 
-        PersonaFisica personaFisica = personaFisicaRepository.findByRfc(rfc)
-                .orElseThrow(() -> new ClienteException(CODIGO_CLIENTE, "Cliente no encontrado con RFC: " + rfc, HttpStatus.NOT_FOUND));
-
-        return mapToResponse(personaFisica, obtenerCuentaPrincipal(personaFisica.getId()));
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public ClienteResponse obtenerClientePorCorreo(String correo) {
-        log.info("Consultando cliente con correo: {}", correo);
-
-        PersonaFisica personaFisica = personaFisicaRepository.findByCorreo(correo)
-                .orElseThrow(() -> new ClienteException(CODIGO_CLIENTE, "Cliente no encontrado con correo: " + correo, HttpStatus.NOT_FOUND));
-
-        return mapToResponse(personaFisica, obtenerCuentaPrincipal(personaFisica.getId()));
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public ClienteResponse obtenerClientePorNumeroCuenta(String numeroCuenta) {
-        log.info("Consultando cliente con número de cuenta: {}", numeroCuenta);
-
-        CuentaBancaria cuentaBancaria = cuentaBancariaRepository.findByNumeroCuenta(numeroCuenta)
-                .orElseThrow(() -> new ValidationException(CODIGO_VALIDACION, "Cuenta bancaria no encontrada con número: " + numeroCuenta));
-
-        PersonaFisica personaFisica = personaFisicaRepository.findById(cuentaBancaria.getPersonaFisica().getId())
-                .orElseThrow(() -> new ClienteException(CODIGO_CLIENTE, "Cliente no encontrado para la cuenta", HttpStatus.NOT_FOUND));
-
-        return mapToResponse(personaFisica, cuentaBancaria);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<ClienteResponse> obtenerTodos() {
-        log.info("Consultando todos los clientes");
-        return mapList(personaFisicaRepository.findAll());
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<ClienteResponse> obtenerClientesActivos() {
-        log.info("Consultando clientes activos");
-        return mapList(personaFisicaRepository.findByActivoTrue());
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<ClienteResponse> buscarPorNombre(String nombre) {
-        log.info("Buscando clientes por nombre: {}", nombre);
-        return mapList(personaFisicaRepository.findByNombreContainingIgnoreCase(nombre));
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<ClienteResponse> buscarPorApellidoPaterno(String apellidoPaterno) {
-        log.info("Buscando clientes por apellido paterno: {}", apellidoPaterno);
-        return mapList(personaFisicaRepository.findByApellidoPaternoContainingIgnoreCase(apellidoPaterno));
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<ClienteResponse> buscarPorApellidoMaterno(String apellidoMaterno) {
-        log.info("Buscando clientes por apellido materno: {}", apellidoMaterno);
-        return mapList(personaFisicaRepository.findByApellidoMaternoContainingIgnoreCase(apellidoMaterno));
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<ClienteResponse> obtenerClientesPorRangoFechas(Date fechaInicio, Date fechaFin) {
-        log.info("Consultando clientes entre {} y {}", fechaInicio, fechaFin);
-        return mapList(personaFisicaRepository.findByFechaCreacionBetween(fechaInicio, fechaFin));
+        return new PageImpl<>(contenido, pageable, page.getTotalElements());
     }
 
     @Override

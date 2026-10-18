@@ -1,73 +1,88 @@
 package com.proyecto.servicios.service.Impl;
 
 import com.proyecto.servicios.entity.catalogos.CatalogoNacionalidad;
-import com.proyecto.servicios.exception.ValidationException;
+import com.proyecto.servicios.enums.ApiResponseEnum;
+import com.proyecto.servicios.exception.CatalogoException;
+import com.proyecto.servicios.model.catalogo.CatalogoNacionalidadActualizaRequest;
+import com.proyecto.servicios.model.catalogo.CatalogoNacionalidadRequest;
+import com.proyecto.servicios.model.catalogo.CatalogoNacionalidadResponse;
+import com.proyecto.servicios.model.catalogo.CatalogoNacionalidadSearchRequest;
 import com.proyecto.servicios.repositorys.catalogos.CatalogoNacionalidadRepository;
 import com.proyecto.servicios.service.CatalogoNacionalidadService;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
 
 @Service
 @Slf4j
 public class CatalogoNacionalidadServiceImpl implements CatalogoNacionalidadService {
 
-    private static final String CODIGO_VALIDACION = "VALIDATION_ERROR";
+    private final CatalogoNacionalidadRepository catalogoNacionalidadRepository;
 
-    @Autowired
-    private CatalogoNacionalidadRepository catalogoNacionalidadRepository;
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<CatalogoNacionalidad> obtenerTodos() {
-        log.info("Consultando todas las nacionalidades del catálogo");
-        return catalogoNacionalidadRepository.findAll();
+    public CatalogoNacionalidadServiceImpl(CatalogoNacionalidadRepository catalogoNacionalidadRepository) {
+        this.catalogoNacionalidadRepository = catalogoNacionalidadRepository;
     }
 
     @Override
     @Transactional(readOnly = true)
-    public CatalogoNacionalidad obtenerPorId(Long id) {
-        log.info("Consultando nacionalidad con id: {}", id);
-        return buscarPorId(id);
+    public CatalogoNacionalidadResponse obtenerPorId(Long id) {
+        log.info("Consultando nacionalidad con ID: {}", id);
+        return mapToResponse(buscarNacionalidad(id));
     }
 
     @Override
-    @Transactional
-    public CatalogoNacionalidad crear(CatalogoNacionalidad catalogoNacionalidad) {
-        log.info("Creando nueva nacionalidad: {}", catalogoNacionalidad.getNombre());
-        return catalogoNacionalidadRepository.save(catalogoNacionalidad);
-    }
+    @Transactional(readOnly = true)
+    public Page<CatalogoNacionalidadResponse> buscar(CatalogoNacionalidadSearchRequest filtros) {
+        String nombre = filtros.getNombre() != null && !filtros.getNombre().isBlank()
+                ? filtros.getNombre().trim() : null;
+        log.info("Buscando nacionalidades con nombre: {}", nombre);
 
-    @Override
-    @Transactional
-    public CatalogoNacionalidad actualizar(Long id, CatalogoNacionalidad catalogoNacionalidad) {
-        log.info("Actualizando nacionalidad con id: {}", id);
-        CatalogoNacionalidad existente = buscarPorId(id);
-        if (catalogoNacionalidad.getNombre() != null) {
-            existente.setNombre(catalogoNacionalidad.getNombre());
+        Specification<CatalogoNacionalidad> spec = Specification.where(null);
+        if (nombre != null) {
+            String patron = "%" + nombre.toLowerCase() + "%";
+            spec = spec.and((root, query, cb) -> cb.like(cb.lower(root.get("nombre")), patron));
         }
-        return catalogoNacionalidadRepository.save(existente);
+
+        return catalogoNacionalidadRepository.findAll(spec, filtros.aPageable()).map(this::mapToResponse);
+    }
+
+    @Override
+    @Transactional
+    public CatalogoNacionalidadResponse crear(CatalogoNacionalidadRequest request) {
+        log.info("Creando nueva nacionalidad: {}", request.getNombre());
+        CatalogoNacionalidad nacionalidad = new CatalogoNacionalidad();
+        nacionalidad.setNombre(request.getNombre());
+        return mapToResponse(catalogoNacionalidadRepository.save(nacionalidad));
+    }
+
+    @Override
+    @Transactional
+    public CatalogoNacionalidadResponse actualizar(CatalogoNacionalidadActualizaRequest request) {
+        log.info("Actualizando nacionalidad con ID: {}", request.getId());
+        CatalogoNacionalidad existente = buscarNacionalidad(request.getId());
+        existente.setNombre(request.getNombre());
+        return mapToResponse(catalogoNacionalidadRepository.save(existente));
     }
 
     @Override
     @Transactional
     public void eliminar(Long id) {
-        log.info("Eliminando nacionalidad con id: {}", id);
-        catalogoNacionalidadRepository.delete(buscarPorId(id));
+        log.info("Eliminando nacionalidad con ID: {}", id);
+        catalogoNacionalidadRepository.delete(buscarNacionalidad(id));
     }
 
-    @Override
-    @Transactional(readOnly = true)
-    public List<CatalogoNacionalidad> buscarPorNombre(String nombre) {
-        log.info("Buscando nacionalidades por nombre: {}", nombre);
-        return catalogoNacionalidadRepository.findByNombreContainingIgnoreCase(nombre);
-    }
-
-    private CatalogoNacionalidad buscarPorId(Long id) {
+    private CatalogoNacionalidad buscarNacionalidad(Long id) {
         return catalogoNacionalidadRepository.findById(id)
-                .orElseThrow(() -> new ValidationException(CODIGO_VALIDACION, "Nacionalidad no encontrada con id: " + id));
+                .orElseThrow(() -> new CatalogoException(ApiResponseEnum.NO_ENCONTRADO,
+                        "Nacionalidad no encontrada con ID: " + id));
+    }
+
+    private CatalogoNacionalidadResponse mapToResponse(CatalogoNacionalidad nacionalidad) {
+        CatalogoNacionalidadResponse response = new CatalogoNacionalidadResponse();
+        response.setId(nacionalidad.getId());
+        response.setNombre(nacionalidad.getNombre());
+        return response;
     }
 }

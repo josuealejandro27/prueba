@@ -8,13 +8,17 @@ import lombok.Setter;
 import java.math.BigDecimal;
 
 /**
- * DTO para actualización parcial de cliente.
+ * DTO para actualización parcial de cliente (el id va dentro del cuerpo).
  * No incluye CURP, RFC ni número de cuenta (no modificables).
  */
 @Getter
 @Setter
 @NoArgsConstructor
-public class ClienteUpdateRequest {
+public class ClienteActualizaRequest {
+
+    @NotNull(message = "El identificador del cliente es obligatorio")
+    @Positive(message = "El identificador del cliente debe ser un valor positivo")
+    private Long id;
 
     // Datos Personales (modificables)
     @Pattern(regexp = "^[a-zA-ZáéíóúÁÉÍÓÚñÑ\\s]+$", message = "El nombre solo puede contener letras y espacios")

@@ -15,6 +15,9 @@ import java.math.BigDecimal;
 @NoArgsConstructor
 public class CuentaUpdateRequest {
 
+    @NotBlank(message = "El número de cuenta es obligatorio")
+    private String numeroCuenta;
+
     @DecimalMin(value = "0.0", message = "El saldo no puede ser negativo")
     @Digits(integer = 8, fraction = 2, message = "El saldo no puede tener más de 8 dígitos enteros y 2 decimales")
     private BigDecimal saldo;

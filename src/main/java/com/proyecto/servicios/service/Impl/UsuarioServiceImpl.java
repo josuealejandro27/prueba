@@ -4,21 +4,21 @@ import com.proyecto.servicios.entity.clientes.PersonaFisica;
 import com.proyecto.servicios.entity.clientes.Usuario;
 import com.proyecto.servicios.exception.UsuarioException;
 import com.proyecto.servicios.exception.ValidationException;
+import com.proyecto.servicios.model.clientes.UsuarioCreateRequest;
 import com.proyecto.servicios.model.clientes.UsuarioResponse;
+import com.proyecto.servicios.model.clientes.UsuarioSearchRequest;
+import com.proyecto.servicios.model.clientes.UsuarioUpdateRequest;
 import com.proyecto.servicios.repositorys.clientes.PersonaFisicaRepository;
 import com.proyecto.servicios.repositorys.clientes.UsuarioRepository;
 import com.proyecto.servicios.service.UsuarioService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 @Service
 @Slf4j
@@ -26,10 +26,6 @@ public class UsuarioServiceImpl implements UsuarioService {
 
     private static final String CODIGO_USUARIO = "USUARIO_ERROR";
     private static final String CODIGO_VALIDACION = "VALIDATION_ERROR";
-
-    private static final Pattern PASSWORD_PATTERN = Pattern.compile(
-            "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]{8,}$"
-    );
 
     @Autowired
     private UsuarioRepository usuarioRepository;
@@ -53,49 +49,45 @@ public class UsuarioServiceImpl implements UsuarioService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<UsuarioResponse> buscarUsuarios(String correo, Long clienteId, Boolean activos) {
-        String correoLimpio = (correo != null && !correo.isBlank()) ? correo.trim() : null;
-        log.info("Consultando usuarios con filtros - correo: {}, clienteId: {}, activos: {}", correoLimpio, clienteId, activos);
+    public Page<UsuarioResponse> buscarUsuarios(UsuarioSearchRequest filtros) {
+        String correoLimpio = (filtros.getCorreo() != null && !filtros.getCorreo().isBlank())
+                ? filtros.getCorreo().trim() : null;
+        log.info("Consultando usuarios con filtros - correo: {}, clienteId: {}, activos: {}",
+                correoLimpio, filtros.getClienteId(), filtros.getActivos());
 
         Specification<Usuario> spec = Specification.where(null);
 
         if (correoLimpio != null) {
-            spec = spec.and((root, query, cb) -> cb.equal(cb.lower(root.get("correo")), correoLimpio.toLowerCase()));
+            // Coincidencia parcial, sin distinguir mayúsculas/minúsculas.
+            String patron = "%" + correoLimpio.toLowerCase() + "%";
+            spec = spec.and((root, query, cb) -> cb.like(cb.lower(root.get("correo")), patron));
         }
 
-        if (clienteId != null) {
-            spec = spec.and((root, query, cb) -> cb.equal(root.get("cliente").get("id"), clienteId));
+        if (filtros.getClienteId() != null) {
+            spec = spec.and((root, query, cb) -> cb.equal(root.get("cliente").get("id"), filtros.getClienteId()));
         }
 
-        if (activos != null) {
-            spec = spec.and((root, query, cb) -> activos
+        if (filtros.getActivos() != null) {
+            spec = spec.and((root, query, cb) -> Boolean.TRUE.equals(filtros.getActivos())
                     ? cb.isTrue(root.get("activo"))
                     : cb.isFalse(root.get("activo")));
         }
 
-        return usuarioRepository.findAll(spec).stream()
-                .map(this::mapToResponse)
-                .collect(Collectors.toList());
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<UsuarioResponse> buscarPorCorreo(String correo) {
-        log.info("Buscando usuarios por correo: {}", correo);
-
-        return usuarioRepository.findByCorreoContainingIgnoreCase(correo).stream()
-                .map(this::mapToResponse)
-                .collect(Collectors.toList());
+        return usuarioRepository.findAll(spec, filtros.aPageable())
+                .map(this::mapToResponse);
     }
 
     @Override
     @Transactional
-    public UsuarioResponse crearUsuario(Long clienteId, String correo, String password) {
-        log.info("Creando usuario para cliente con ID: {}", clienteId);
+    public UsuarioResponse crearUsuario(UsuarioCreateRequest request) {
+        log.info("Creando usuario para cliente con ID: {}", request.getClienteId());
 
         // Validar que el cliente exista
-        PersonaFisica cliente = personaFisicaRepository.findById(clienteId)
-                .orElseThrow(() -> new ValidationException(CODIGO_VALIDACION, "Cliente no encontrado con ID: " + clienteId));
+        PersonaFisica cliente = personaFisicaRepository.findById(request.getClienteId())
+                .orElseThrow(() -> new ValidationException(CODIGO_VALIDACION,
+                        "Cliente no encontrado con ID: " + request.getClienteId()));
+
+        String correo = request.getCorreo().trim();
 
         // Validar que no exista otro usuario con el mismo correo
         if (usuarioRepository.existsByCorreo(correo)) {
@@ -103,18 +95,15 @@ public class UsuarioServiceImpl implements UsuarioService {
         }
 
         // Validar que el cliente no tenga ya un usuario
-        if (usuarioRepository.existsByClienteId(clienteId)) {
+        if (usuarioRepository.existsByClienteId(request.getClienteId())) {
             throw new UsuarioException(CODIGO_USUARIO, "El cliente ya tiene un usuario asociado", HttpStatus.CONFLICT);
         }
 
-        // Validar formato de contraseña
-        validarPassword(password);
-
-        // Crear usuario
+        // Crear usuario (activo y fechas los controla el servidor)
         Usuario usuario = new Usuario();
         usuario.setCliente(cliente);
         usuario.setCorreo(correo);
-        usuario.setPassword(passwordEncoder.encode(password));
+        usuario.setPassword(passwordEncoder.encode(request.getPassword()));
         usuario.setActivo(true);
 
         usuario = usuarioRepository.save(usuario);
@@ -125,11 +114,15 @@ public class UsuarioServiceImpl implements UsuarioService {
 
     @Override
     @Transactional
-    public UsuarioResponse actualizarUsuario(Long id, String correo, String password) {
-        log.info("Actualizando usuario con ID: {}", id);
+    public UsuarioResponse actualizarUsuario(UsuarioUpdateRequest request) {
+        log.info("Actualizando usuario con ID: {}", request.getId());
 
-        Usuario usuario = usuarioRepository.findById(id)
-                .orElseThrow(() -> new UsuarioException(CODIGO_USUARIO, "Usuario no encontrado con ID: " + id, HttpStatus.NOT_FOUND));
+        Usuario usuario = usuarioRepository.findById(request.getId())
+                .orElseThrow(() -> new UsuarioException(CODIGO_USUARIO,
+                        "Usuario no encontrado con ID: " + request.getId(), HttpStatus.NOT_FOUND));
+
+        String correo = (request.getCorreo() != null && !request.getCorreo().isBlank())
+                ? request.getCorreo().trim() : null;
 
         if (correo != null && !correo.equals(usuario.getCorreo())) {
             if (usuarioRepository.existsByCorreo(correo)) {
@@ -138,9 +131,8 @@ public class UsuarioServiceImpl implements UsuarioService {
             usuario.setCorreo(correo);
         }
 
-        if (password != null) {
-            validarPassword(password);
-            usuario.setPassword(passwordEncoder.encode(password));
+        if (request.getPassword() != null) {
+            usuario.setPassword(passwordEncoder.encode(request.getPassword()));
         }
 
         usuario = usuarioRepository.save(usuario);
@@ -177,15 +169,6 @@ public class UsuarioServiceImpl implements UsuarioService {
 
         log.info("Usuario activado exitosamente");
         return mapToResponse(usuario);
-    }
-
-    private void validarPassword(String password) {
-        if (password == null || password.length() < 8) {
-            throw new ValidationException(CODIGO_VALIDACION, "La contraseña debe tener al menos 8 caracteres");
-        }
-        if (!PASSWORD_PATTERN.matcher(password).matches()) {
-            throw new ValidationException(CODIGO_VALIDACION, "La contraseña debe contener al menos una letra mayúscula, una letra minúscula, un número y un carácter especial");
-        }
     }
 
     private UsuarioResponse mapToResponse(Usuario usuario) {

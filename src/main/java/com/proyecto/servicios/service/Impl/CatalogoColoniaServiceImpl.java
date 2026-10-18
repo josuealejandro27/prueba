@@ -2,101 +2,114 @@ package com.proyecto.servicios.service.Impl;
 
 import com.proyecto.servicios.entity.catalogos.CatalogoColonia;
 import com.proyecto.servicios.entity.catalogos.CatalogoMunicipio;
-import com.proyecto.servicios.exception.ValidationException;
+import com.proyecto.servicios.enums.ApiResponseEnum;
+import com.proyecto.servicios.exception.CatalogoException;
+import com.proyecto.servicios.model.catalogo.CatalogoColoniaActualizaRequest;
+import com.proyecto.servicios.model.catalogo.CatalogoColoniaRequest;
+import com.proyecto.servicios.model.catalogo.CatalogoColoniaResponse;
+import com.proyecto.servicios.model.catalogo.CatalogoColoniaSearchRequest;
 import com.proyecto.servicios.repositorys.catalogos.CatalogoColoniaRepository;
 import com.proyecto.servicios.repositorys.catalogos.CatalogoMunicipioRepository;
 import com.proyecto.servicios.service.CatalogoColoniaService;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
 
 @Service
 @Slf4j
 public class CatalogoColoniaServiceImpl implements CatalogoColoniaService {
 
-    private static final String CODIGO_VALIDACION = "VALIDATION_ERROR";
+    private final CatalogoColoniaRepository catalogoColoniaRepository;
+    private final CatalogoMunicipioRepository catalogoMunicipioRepository;
 
-    @Autowired
-    private CatalogoColoniaRepository catalogoColoniaRepository;
-
-    @Autowired
-    private CatalogoMunicipioRepository catalogoMunicipioRepository;
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<CatalogoColonia> obtenerTodos() {
-        log.info("Consultando todas las colonias del catálogo");
-        return catalogoColoniaRepository.findAll();
+    public CatalogoColoniaServiceImpl(CatalogoColoniaRepository catalogoColoniaRepository,
+                                      CatalogoMunicipioRepository catalogoMunicipioRepository) {
+        this.catalogoColoniaRepository = catalogoColoniaRepository;
+        this.catalogoMunicipioRepository = catalogoMunicipioRepository;
     }
 
     @Override
     @Transactional(readOnly = true)
-    public CatalogoColonia obtenerPorId(Long id) {
-        log.info("Consultando colonia con id: {}", id);
-        return buscarPorId(id);
+    public CatalogoColoniaResponse obtenerPorId(Long id) {
+        log.info("Consultando colonia con ID: {}", id);
+        CatalogoColonia colonia = buscarPorId(id);
+        return mapToResponse(colonia);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<CatalogoColoniaResponse> buscar(CatalogoColoniaSearchRequest filtros) {
+        String nombreLimpio = (filtros.getNombre() != null && !filtros.getNombre().isBlank())
+                ? filtros.getNombre().trim() : null;
+        log.info("Buscando colonias con filtros - nombre: {}, municipioId: {}", nombreLimpio, filtros.getMunicipioId());
+
+        Specification<CatalogoColonia> spec = Specification.where(null);
+
+        if (nombreLimpio != null) {
+            // Coincidencia parcial, sin distinguir mayúsculas/minúsculas.
+            String patron = "%" + nombreLimpio.toLowerCase() + "%";
+            spec = spec.and((root, query, cb) -> cb.like(cb.lower(root.get("nombre")), patron));
+        }
+
+        if (filtros.getMunicipioId() != null) {
+            spec = spec.and((root, query, cb) -> cb.equal(root.get("municipio").get("id"), filtros.getMunicipioId()));
+        }
+
+        return catalogoColoniaRepository.findAll(spec, filtros.aPageable()).map(this::mapToResponse);
     }
 
     @Override
     @Transactional
-    public CatalogoColonia crear(CatalogoColonia catalogoColonia) {
-        log.info("Creando nueva colonia: {}", catalogoColonia.getNombre());
-        CatalogoColonia nueva = new CatalogoColonia();
-        nueva.setNombre(catalogoColonia.getNombre());
-        nueva.setMunicipio(resolverMunicipio(catalogoColonia.getMunicipio()));
-        return catalogoColoniaRepository.save(nueva);
+    public CatalogoColoniaResponse crear(CatalogoColoniaRequest request) {
+        log.info("Creando colonia: {} (municipio ID: {})", request.getNombre(), request.getMunicipioId());
+        CatalogoColonia colonia = new CatalogoColonia();
+        colonia.setNombre(request.getNombre().trim());
+        colonia.setMunicipio(buscarMunicipio(request.getMunicipioId()));
+        CatalogoColonia guardada = catalogoColoniaRepository.save(colonia);
+        log.info("Colonia creada exitosamente con ID: {}", guardada.getId());
+        return mapToResponse(guardada);
     }
 
     @Override
     @Transactional
-    public CatalogoColonia actualizar(Long id, CatalogoColonia catalogoColonia) {
-        log.info("Actualizando colonia con id: {}", id);
-        CatalogoColonia existente = buscarPorId(id);
-        if (catalogoColonia.getNombre() != null) {
-            existente.setNombre(catalogoColonia.getNombre());
-        }
-        if (catalogoColonia.getMunicipio() != null && catalogoColonia.getMunicipio().getId() != null) {
-            existente.setMunicipio(resolverMunicipio(catalogoColonia.getMunicipio()));
-        }
-        return catalogoColoniaRepository.save(existente);
+    public CatalogoColoniaResponse actualizar(CatalogoColoniaActualizaRequest request) {
+        log.info("Actualizando colonia con ID: {}", request.getId());
+        CatalogoColonia colonia = buscarPorId(request.getId());
+        colonia.setNombre(request.getNombre().trim());
+        colonia.setMunicipio(buscarMunicipio(request.getMunicipioId()));
+        CatalogoColonia actualizada = catalogoColoniaRepository.save(colonia);
+        log.info("Colonia actualizada exitosamente con ID: {}", actualizada.getId());
+        return mapToResponse(actualizada);
     }
 
     @Override
     @Transactional
     public void eliminar(Long id) {
-        log.info("Eliminando colonia con id: {}", id);
-        catalogoColoniaRepository.delete(buscarPorId(id));
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<CatalogoColonia> buscarPorNombre(String nombre) {
-        log.info("Buscando colonias por nombre: {}", nombre);
-        return catalogoColoniaRepository.findByNombreContainingIgnoreCase(nombre);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<CatalogoColonia> obtenerPorMunicipioId(Long municipioId) {
-        log.info("Consultando colonias del municipio con id: {}", municipioId);
-        if (!catalogoMunicipioRepository.existsById(municipioId)) {
-            throw new ValidationException(CODIGO_VALIDACION, "Municipio no encontrado con id: " + municipioId);
-        }
-        return catalogoColoniaRepository.findByMunicipioId(municipioId);
+        log.info("Eliminando colonia con ID: {}", id);
+        buscarPorId(id);
+        catalogoColoniaRepository.deleteById(id);
     }
 
     private CatalogoColonia buscarPorId(Long id) {
         return catalogoColoniaRepository.findById(id)
-                .orElseThrow(() -> new ValidationException(CODIGO_VALIDACION, "Colonia no encontrada con id: " + id));
+                .orElseThrow(() -> new CatalogoException(ApiResponseEnum.NO_ENCONTRADO,
+                        "Colonia no encontrada con ID: " + id));
     }
 
-    private CatalogoMunicipio resolverMunicipio(CatalogoMunicipio municipio) {
-        if (municipio == null || municipio.getId() == null) {
-            throw new ValidationException(CODIGO_VALIDACION, "El municipio de la colonia es obligatorio (enviar su id)");
-        }
-        return catalogoMunicipioRepository.findById(municipio.getId())
-                .orElseThrow(() -> new ValidationException(CODIGO_VALIDACION, "Municipio no encontrado con id: " + municipio.getId()));
+    private CatalogoMunicipio buscarMunicipio(Long municipioId) {
+        return catalogoMunicipioRepository.findById(municipioId)
+                .orElseThrow(() -> new CatalogoException(ApiResponseEnum.NO_ENCONTRADO,
+                        "Municipio no encontrado con ID: " + municipioId));
+    }
+
+    private CatalogoColoniaResponse mapToResponse(CatalogoColonia colonia) {
+        CatalogoColoniaResponse response = new CatalogoColoniaResponse();
+        response.setId(colonia.getId());
+        response.setNombre(colonia.getNombre());
+        response.setMunicipioId(colonia.getMunicipio().getId());
+        response.setMunicipioNombre(colonia.getMunicipio().getNombre());
+        return response;
     }
 }

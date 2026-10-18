@@ -1,63 +1,88 @@
 package com.proyecto.servicios.service.Impl;
 
 import com.proyecto.servicios.entity.catalogos.CatalogoGeneros;
-import com.proyecto.servicios.exception.ValidationException;
+import com.proyecto.servicios.enums.ApiResponseEnum;
+import com.proyecto.servicios.exception.CatalogoException;
+import com.proyecto.servicios.model.catalogo.CatalogoGeneroActualizaRequest;
+import com.proyecto.servicios.model.catalogo.CatalogoGeneroRequest;
+import com.proyecto.servicios.model.catalogo.CatalogoGeneroResponse;
+import com.proyecto.servicios.model.catalogo.CatalogoGeneroSearchRequest;
 import com.proyecto.servicios.repositorys.catalogos.CatalogoGenerosRepository;
 import com.proyecto.servicios.service.CatalogoGeneroService;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
-
-import java.util.List;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @Slf4j
 public class CatalogoGeneroServiceImpl implements CatalogoGeneroService {
 
-    private static final String CODIGO_VALIDACION = "VALIDATION_ERROR";
+    private final CatalogoGenerosRepository catalogoGenerosRepository;
 
-    @Autowired
-    private CatalogoGenerosRepository catalogoGenerosRepository;
-
-    @Override
-    public List<CatalogoGeneros> obtenerTodos() {
-        log.info("Consultando todos los géneros del catálogo");
-        return catalogoGenerosRepository.findAll();
+    public CatalogoGeneroServiceImpl(CatalogoGenerosRepository catalogoGenerosRepository) {
+        this.catalogoGenerosRepository = catalogoGenerosRepository;
     }
 
     @Override
-    public CatalogoGeneros obtenerPorId(Long id) {
-        log.info("Consultando género con id: {}", id);
-        return catalogoGenerosRepository.findById(id)
-                .orElseThrow(() -> new ValidationException(CODIGO_VALIDACION, "Género no encontrado con id: " + id));
+    @Transactional(readOnly = true)
+    public CatalogoGeneroResponse obtenerPorId(Long id) {
+        log.info("Consultando género con ID: {}", id);
+        return mapToResponse(buscarGenero(id));
     }
 
     @Override
-    public CatalogoGeneros crear(CatalogoGeneros catalogoGeneros) {
-        log.info("Creando nuevo género: {}", catalogoGeneros.getTipo());
-        return catalogoGenerosRepository.save(catalogoGeneros);
+    @Transactional(readOnly = true)
+    public Page<CatalogoGeneroResponse> buscar(CatalogoGeneroSearchRequest filtros) {
+        String tipo = filtros.getTipo() != null && !filtros.getTipo().isBlank()
+                ? filtros.getTipo().trim() : null;
+        log.info("Buscando géneros con tipo: {}", tipo);
+
+        Specification<CatalogoGeneros> spec = Specification.where(null);
+        if (tipo != null) {
+            String patron = "%" + tipo.toLowerCase() + "%";
+            spec = spec.and((root, query, cb) -> cb.like(cb.lower(root.get("tipo")), patron));
+        }
+
+        return catalogoGenerosRepository.findAll(spec, filtros.aPageable()).map(this::mapToResponse);
     }
 
     @Override
-    public CatalogoGeneros actualizar(Long id, CatalogoGeneros catalogoGeneros) {
-        log.info("Actualizando género con id: {}", id);
-        CatalogoGeneros existente = catalogoGenerosRepository.findById(id)
-                .orElseThrow(() -> new ValidationException(CODIGO_VALIDACION, "Género no encontrado con id: " + id));
-        existente.setTipo(catalogoGeneros.getTipo());
-        return catalogoGenerosRepository.save(existente);
+    @Transactional
+    public CatalogoGeneroResponse crear(CatalogoGeneroRequest request) {
+        log.info("Creando nuevo género: {}", request.getTipo());
+        CatalogoGeneros genero = new CatalogoGeneros();
+        genero.setTipo(request.getTipo());
+        return mapToResponse(catalogoGenerosRepository.save(genero));
     }
 
     @Override
+    @Transactional
+    public CatalogoGeneroResponse actualizar(CatalogoGeneroActualizaRequest request) {
+        log.info("Actualizando género con ID: {}", request.getId());
+        CatalogoGeneros existente = buscarGenero(request.getId());
+        existente.setTipo(request.getTipo());
+        return mapToResponse(catalogoGenerosRepository.save(existente));
+    }
+
+    @Override
+    @Transactional
     public void eliminar(Long id) {
-        log.info("Eliminando género con id: {}", id);
-        CatalogoGeneros existente = catalogoGenerosRepository.findById(id)
-                .orElseThrow(() -> new ValidationException(CODIGO_VALIDACION, "Género no encontrado con id: " + id));
-        catalogoGenerosRepository.delete(existente);
+        log.info("Eliminando género con ID: {}", id);
+        catalogoGenerosRepository.delete(buscarGenero(id));
     }
 
-    @Override
-    public List<CatalogoGeneros> buscarPorTipo(String tipo) {
-        log.info("Buscando géneros por tipo: {}", tipo);
-        return catalogoGenerosRepository.findByTipoContainingIgnoreCase(tipo);
+    private CatalogoGeneros buscarGenero(Long id) {
+        return catalogoGenerosRepository.findById(id)
+                .orElseThrow(() -> new CatalogoException(ApiResponseEnum.NO_ENCONTRADO,
+                        "Género no encontrado con ID: " + id));
+    }
+
+    private CatalogoGeneroResponse mapToResponse(CatalogoGeneros genero) {
+        CatalogoGeneroResponse response = new CatalogoGeneroResponse();
+        response.setId(genero.getId());
+        response.setTipo(genero.getTipo());
+        return response;
     }
 }

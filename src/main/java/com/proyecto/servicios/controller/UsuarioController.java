@@ -2,16 +2,28 @@ package com.proyecto.servicios.controller;
 
 import com.proyecto.servicios.enums.ApiResponseEnum;
 import com.proyecto.servicios.model.ApiResponse;
+import com.proyecto.servicios.model.clientes.UsuarioCreateRequest;
+import com.proyecto.servicios.model.clientes.UsuarioIdRequest;
 import com.proyecto.servicios.model.clientes.UsuarioResponse;
+import com.proyecto.servicios.model.clientes.UsuarioSearchRequest;
+import com.proyecto.servicios.model.clientes.UsuarioUpdateRequest;
+import com.proyecto.servicios.model.pagination.PageResponse;
 import com.proyecto.servicios.service.UsuarioService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RestController;
 
-import java.util.List;
-
+@Tag(name = "Gestión de Usuarios", description = "Endpoints para la administración de usuarios")
 @RestController
 public class UsuarioController {
 
@@ -21,51 +33,56 @@ public class UsuarioController {
         this.usuarioService = usuarioService;
     }
 
-    @GetMapping(value = "/usuarios/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<ApiResponse<UsuarioResponse>> obtenerUsuario(@PathVariable Long id) {
-        UsuarioResponse usuario = usuarioService.obtenerUsuario(id);
+    @Operation(summary = "Consultar usuario por ID",
+            description = "Método GET con el identificador enviado en el cuerpo (DTO) para respetar la "
+                    + "restricción de no usar @PathVariable ni @RequestParam.")
+    @GetMapping(value = "/usuarios/consultar", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<ApiResponse<UsuarioResponse>> obtenerUsuario(@Valid @RequestBody UsuarioIdRequest request) {
+        UsuarioResponse usuario = usuarioService.obtenerUsuario(request.getId());
         return ResponseEntity.ok(ApiResponse.of(ApiResponseEnum.OK, usuario));
     }
 
-    @Operation(summary = "Consultar usuarios con filtros",
-            description = "Todos los parámetros son opcionales y combinables. Sin parámetros devuelve todos los usuarios. "
-                    + "'correo' no distingue mayúsculas; 'activos': true = solo activos, false = solo inactivos.")
-    @GetMapping(value = "/usuarios", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<ApiResponse<List<UsuarioResponse>>> buscarUsuarios(
-            @RequestParam(required = false) String correo,
-            @RequestParam(required = false) Long clienteId,
-            @RequestParam(required = false) Boolean activos) {
-        List<UsuarioResponse> usuarios = usuarioService.buscarUsuarios(correo, clienteId, activos);
-        return ResponseEntity.ok(ApiResponse.of(ApiResponseEnum.OK, usuarios));
+    @Operation(summary = "Consultar usuarios con filtros y paginación",
+            description = "Todos los criterios son opcionales y combinables. Sin criterios devuelve todos los usuarios. "
+                    + "'correo' aplica coincidencia parcial sin distinguir mayúsculas; 'activos': true = solo activos, false = solo inactivos. "
+                    + "La paginación se controla con 'pagina' (base 0) y 'tamano'.")
+    @GetMapping(value = "/usuarios/buscar", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<ApiResponse<PageResponse<UsuarioResponse>>> buscarUsuarios(
+            @Valid @RequestBody(required = false) UsuarioSearchRequest request) {
+        UsuarioSearchRequest filtro = request != null ? request : new UsuarioSearchRequest();
+        Page<UsuarioResponse> usuarios = usuarioService.buscarUsuarios(filtro);
+        return ResponseEntity.ok(ApiResponse.of(ApiResponseEnum.OK, PageResponse.desde(usuarios)));
     }
 
-    @GetMapping(value = "/usuarios/filtro", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<ApiResponse<List<UsuarioResponse>>> buscarPorCorreo(@RequestParam String correo) {
-        List<UsuarioResponse> usuarios = usuarioService.buscarPorCorreo(correo);
-        return ResponseEntity.ok(ApiResponse.of(ApiResponseEnum.OK, usuarios));
+    @Operation(summary = "Crear usuario")
+    @PostMapping(value = "/usuarios/agregar", produces = MediaType.APPLICATION_JSON_VALUE,
+            consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<ApiResponse<UsuarioResponse>> crearUsuario(@Valid @RequestBody UsuarioCreateRequest request) {
+        UsuarioResponse usuario = usuarioService.crearUsuario(request);
+        return new ResponseEntity<>(ApiResponse.of(ApiResponseEnum.CREADO, usuario), HttpStatus.CREATED);
     }
 
-    @PostMapping(value = "/usuarios/agregar", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<ApiResponse<UsuarioResponse>> crearUsuario(@RequestParam Long clienteId, @RequestParam String correo, @RequestParam String password) {
-        UsuarioResponse usuario = usuarioService.crearUsuario(clienteId, correo, password);
-        return new ResponseEntity<>(ApiResponse.of(ApiResponseEnum.OK, usuario), HttpStatus.CREATED);
-    }
-
-    @PutMapping(value = "/usuarios/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<ApiResponse<UsuarioResponse>> actualizarUsuario(@PathVariable Long id, @RequestParam(required = false) String correo, @RequestParam(required = false) String password) {
-        UsuarioResponse usuario = usuarioService.actualizarUsuario(id, correo, password);
+    @Operation(summary = "Actualizar usuario (parcial)")
+    @PutMapping(value = "/usuarios/actualizar", produces = MediaType.APPLICATION_JSON_VALUE,
+            consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<ApiResponse<UsuarioResponse>> actualizarUsuario(@Valid @RequestBody UsuarioUpdateRequest request) {
+        UsuarioResponse usuario = usuarioService.actualizarUsuario(request);
         return ResponseEntity.ok(ApiResponse.of(ApiResponseEnum.OK, usuario));
     }
 
-    @PatchMapping(value = "/usuarios/{id}/desactivar", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<ApiResponse<UsuarioResponse>> desactivarUsuario(@PathVariable Long id) {
-        UsuarioResponse usuario = usuarioService.desactivarUsuario(id);
+    @Operation(summary = "Desactivar usuario (baja lógica)")
+    @PatchMapping(value = "/usuarios/desactivar", produces = MediaType.APPLICATION_JSON_VALUE,
+            consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<ApiResponse<UsuarioResponse>> desactivarUsuario(@Valid @RequestBody UsuarioIdRequest request) {
+        UsuarioResponse usuario = usuarioService.desactivarUsuario(request.getId());
         return ResponseEntity.ok(ApiResponse.of(ApiResponseEnum.OK, usuario));
     }
 
-    @PatchMapping(value = "/usuarios/{id}/activar", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<ApiResponse<UsuarioResponse>> activarUsuario(@PathVariable Long id) {
-        UsuarioResponse usuario = usuarioService.activarUsuario(id);
+    @Operation(summary = "Activar usuario")
+    @PatchMapping(value = "/usuarios/activar", produces = MediaType.APPLICATION_JSON_VALUE,
+            consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<ApiResponse<UsuarioResponse>> activarUsuario(@Valid @RequestBody UsuarioIdRequest request) {
+        UsuarioResponse usuario = usuarioService.activarUsuario(request.getId());
         return ResponseEntity.ok(ApiResponse.of(ApiResponseEnum.OK, usuario));
     }
 }

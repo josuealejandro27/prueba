@@ -5,12 +5,14 @@ import com.proyecto.servicios.entity.clientes.PersonaFisica;
 import com.proyecto.servicios.exception.CuentaException;
 import com.proyecto.servicios.exception.ValidationException;
 import com.proyecto.servicios.model.clientes.CuentaResponse;
+import com.proyecto.servicios.model.clientes.CuentaSearchRequest;
 import com.proyecto.servicios.model.clientes.CuentaUpdateRequest;
 import com.proyecto.servicios.repositorys.clientes.CuentaBancariaRepository;
 import com.proyecto.servicios.repositorys.clientes.PersonaFisicaRepository;
 import com.proyecto.servicios.service.CuentaService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -18,9 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 @Service
 @Slf4j
@@ -49,24 +49,27 @@ public class CuentaServiceImpl implements CuentaService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<CuentaResponse> buscarCuentas(Long clienteId, Boolean activas) {
-        log.info("Consultando cuentas con filtros - clienteId: {}, activas: {}", clienteId, activas);
+    public Page<CuentaResponse> buscarCuentas(CuentaSearchRequest filtros) {
+        log.info("Consultando cuentas con filtros - clienteId: {}, activas: {}, estatus: {}",
+                filtros.getClienteId(), filtros.getActivas(), filtros.getEstatus());
 
         Specification<CuentaBancaria> spec = Specification.where(null);
 
-        if (clienteId != null) {
-            spec = spec.and((root, query, cb) -> cb.equal(root.get("personaFisica").get("id"), clienteId));
+        if (filtros.getClienteId() != null) {
+            spec = spec.and((root, query, cb) -> cb.equal(root.get("personaFisica").get("id"), filtros.getClienteId()));
         }
 
-        if (activas != null) {
-            spec = spec.and((root, query, cb) -> activas
+        if (filtros.getEstatus() != null && !filtros.getEstatus().isBlank()) {
+            spec = spec.and((root, query, cb) -> cb.equal(cb.upper(root.get("estatus")), filtros.getEstatus().toUpperCase()));
+        }
+
+        if (filtros.getActivas() != null) {
+            spec = spec.and((root, query, cb) -> filtros.getActivas()
                     ? cb.equal(cb.upper(root.get("estatus")), ESTATUS_ACTIVA)
                     : cb.notEqual(cb.upper(root.get("estatus")), ESTATUS_ACTIVA));
         }
 
-        return cuentaBancariaRepository.findAll(spec).stream()
-                .map(this::mapToResponse)
-                .collect(Collectors.toList());
+        return cuentaBancariaRepository.findAll(spec, filtros.aPageable()).map(this::mapToResponse);
     }
 
     @Override
