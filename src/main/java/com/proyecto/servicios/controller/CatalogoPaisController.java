@@ -17,7 +17,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -34,23 +33,34 @@ public class CatalogoPaisController {
         this.catalogoPaisService = catalogoPaisService;
     }
 
-    @Operation(summary = "Consultar país por ID")
+    @Operation(summary = "Consultar país por ID",
+            requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(required = true,
+                    description = "Identificador del registro: {\"id\":1}",
+                    content = @io.swagger.v3.oas.annotations.media.Content(schema = @io.swagger.v3.oas.annotations.media.Schema(
+                            implementation = CatalogoIdRequest.class))))
     @GetMapping(value = "/catalogos/pais/consultar", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ApiResponse<CatalogoPaisResponse>> obtenerPorId(
+            @io.swagger.v3.oas.annotations.Parameter(hidden = true)
             @Valid @RequestBody CatalogoIdRequest request) {
         CatalogoPaisResponse pais = catalogoPaisService.obtenerPorId(request.getId());
         return ResponseEntity.ok(ApiResponse.of(ApiResponseEnum.OK, pais));
     }
 
     @Operation(summary = "Consultar países con filtros",
-            description = "Todos los criterios son opcionales y combinables y se envían como parámetros de consulta "
-                    + "(query params): ?nombre=...&pagina=0&tamano=10. Sin parámetros devuelve todos los países. "
-                    + "'nombre' aplica coincidencia parcial sin distinguir mayúsculas. "
-                    + "La paginación se controla con 'pagina' (base 0) y 'tamano'.")
+            description = "Todos los criterios son opcionales y combinables y se envían en el cuerpo (DTO): "
+                    + "{\"nombre\":\"...\",\"pagina\":0,\"tamano\":10}. Sin cuerpo (o cuerpo vacío) devuelve "
+                    + "todos los países paginados. 'nombre' aplica coincidencia parcial sin distinguir mayúsculas. "
+                    + "La paginación se controla con 'pagina' (base 0) y 'tamano'; la respuesta incluye "
+                    + "'pagina', 'totalPaginas', 'totalElementos' y 'esUltima'.",
+            requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(required = false,
+                    content = @io.swagger.v3.oas.annotations.media.Content(schema = @io.swagger.v3.oas.annotations.media.Schema(
+                            implementation = CatalogoPaisSearchRequest.class))))
     @GetMapping(value = "/catalogos/pais/buscar", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ApiResponse<PageResponse<CatalogoPaisResponse>>> buscar(
-            @Valid @ModelAttribute CatalogoPaisSearchRequest request) {
-        Page<CatalogoPaisResponse> paises = catalogoPaisService.buscar(request);
+            @io.swagger.v3.oas.annotations.Parameter(hidden = true)
+            @Valid @RequestBody(required = false) CatalogoPaisSearchRequest request) {
+        CatalogoPaisSearchRequest filtros = request != null ? request : new CatalogoPaisSearchRequest();
+        Page<CatalogoPaisResponse> paises = catalogoPaisService.buscar(filtros);
         return ResponseEntity.ok(ApiResponse.of(ApiResponseEnum.OK, PageResponse.desde(paises)));
     }
 

@@ -18,7 +18,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -37,22 +36,34 @@ public class PersonaController {
 
     @Operation(summary = "Consultar persona por nombre",
             description = "Método GET con el nombre enviado en el cuerpo (DTO) para respetar la "
-                    + "restricción de no usar @PathVariable ni @RequestParam.")
+                    + "restricción de no usar @PathVariable ni @RequestParam.",
+            requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(required = true,
+                    description = "Nombre de la persona: {\"nombre\":\"Juan\"}",
+                    content = @io.swagger.v3.oas.annotations.media.Content(schema = @io.swagger.v3.oas.annotations.media.Schema(
+                            implementation = PersonasNombreRequest.class))))
     @GetMapping(value = "/personas/consultar", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ApiResponse<PersonaResponse>> obtenerPersona(
-            @Valid @ModelAttribute PersonasNombreRequest request) {
+            @io.swagger.v3.oas.annotations.Parameter(hidden = true)
+            @Valid @RequestBody PersonasNombreRequest request) {
         PersonaResponse persona = personaService.obtenerPersona(request.getNombre());
         return ResponseEntity.ok(ApiResponse.of(ApiResponseEnum.OK, persona));
     }
 
     @Operation(summary = "Consultar personas con filtros y paginación",
-            description = "Todos los criterios son opcionales y combinables y se envían como parámetros de consulta "
-                    + "(query params): ?nombre=...&apellidoP=...&pagina=0&tamano=10. Sin criterios devuelve todas las personas. "
+            description = "Todos los criterios son opcionales y combinables y se envían en el cuerpo (DTO): "
+                    + "{\"nombre\":\"...\",\"apellidoP\":\"...\",\"pagina\":0,\"tamano\":10}. "
+                    + "Sin cuerpo (o cuerpo vacío) devuelve todas las personas paginadas. "
                     + "'nombre', 'apellidoP' y 'apellidoMaterno' aplican coincidencia parcial sin distinguir mayúsculas. "
-                    + "La paginación se controla con 'pagina' (base 0) y 'tamano'.")
+                    + "La paginación se controla con 'pagina' (base 0) y 'tamano'; la respuesta incluye "
+                    + "'pagina', 'totalPaginas', 'totalElementos' y 'esUltima'.",
+            requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(required = false,
+                    description = "Criterios de búsqueda y paginación, todos opcionales. Ejemplo: {\"nombre\":\"...\",\"pagina\":1,\"tamano\":10}",
+                    content = @io.swagger.v3.oas.annotations.media.Content(schema = @io.swagger.v3.oas.annotations.media.Schema(
+                            implementation = PersonasSearchRequest.class))))
     @GetMapping(value = "/personas/buscar", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ApiResponse<PageResponse<PersonaResponse>>> buscarPersonas(
-            @Valid @ModelAttribute PersonasSearchRequest request) {
+            @io.swagger.v3.oas.annotations.Parameter(hidden = true)
+            @Valid @RequestBody(required = false) PersonasSearchRequest request) {
         PersonasSearchRequest filtro = request != null ? request : new PersonasSearchRequest();
         Page<PersonaResponse> personas = personaService.buscarPersonas(filtro);
         return ResponseEntity.ok(ApiResponse.of(ApiResponseEnum.OK, PageResponse.desde(personas)));

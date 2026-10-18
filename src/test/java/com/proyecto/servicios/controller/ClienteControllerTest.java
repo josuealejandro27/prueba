@@ -11,6 +11,7 @@ import com.proyecto.servicios.service.ClienteService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.PageImpl;
@@ -23,6 +24,8 @@ import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
 
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -34,9 +37,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 /**
  * Verifica el contrato HTTP del {@code ClienteController}: consultas y
- * búsquedas con método GET enviando los criterios y la paginación como
- * parámetros de consulta (query params, sin {@code @RequestParam}), altas en
- * POST y actualizaciones en PUT/PATCH, validación centralizada en el
+ * búsquedas con método GET recibiendo el DTO de criterios (con filtros y
+ * paginación opcionales) por {@code @RequestBody}, altas en POST y
+ * actualizaciones en PUT/PATCH, validación centralizada en el
  * {@code GlobalExceptionHandler} y ausencia de rutas con {@code @PathVariable}
  * o {@code @RequestParam}.
  */
@@ -115,20 +118,45 @@ class ClienteControllerTest {
                 .thenReturn(new PageImpl<>(List.of(clienteResponse), PageRequest.of(1, 10), 21));
 
         mockMvc.perform(get("/clientes/buscar")
-                        .param("curp", "PERJ900520HDFRPN09")
-                        .param("pagina", "1")
-                        .param("tamano", "10"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"curp\":\"PERJ900520HDFRPN09\",\"pagina\":1,\"tamano\":10}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.contenido[0].curp").value("PERJ900520HDFRPN09"))
-                .andExpect(jsonPath("$.data.totalElementos").value(21))
                 .andExpect(jsonPath("$.data.pagina").value(1))
+                .andExpect(jsonPath("$.data.tamano").value(10))
+                .andExpect(jsonPath("$.data.totalElementos").value(21))
+                .andExpect(jsonPath("$.data.totalPaginas").value(3))
+                .andExpect(jsonPath("$.data.esUltima").value(false));
+
+        ArgumentCaptor<ClienteSearchRequest> captor = ArgumentCaptor.forClass(ClienteSearchRequest.class);
+        verify(clienteService).buscarClientes(captor.capture());
+        assertEquals("PERJ900520HDFRPN09", captor.getValue().getCurp());
+        assertEquals(1, captor.getValue().getPagina());
+        assertEquals(10, captor.getValue().getTamano());
+    }
+
+    @Test
+    void buscarClientes_SinCuerpo_DevuelvePrimeraPaginaPorDefecto() throws Exception {
+        when(clienteService.buscarClientes(any(ClienteSearchRequest.class)))
+                .thenReturn(new PageImpl<>(List.of(clienteResponse), PageRequest.of(0, 10), 1));
+
+        mockMvc.perform(get("/clientes/buscar"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.pagina").value(0))
                 .andExpect(jsonPath("$.data.tamano").value(10));
+
+        ArgumentCaptor<ClienteSearchRequest> captor = ArgumentCaptor.forClass(ClienteSearchRequest.class);
+        verify(clienteService).buscarClientes(captor.capture());
+        assertNull(captor.getValue().getCurp());
+        assertEquals(0, captor.getValue().getPagina());
+        assertEquals(10, captor.getValue().getTamano());
     }
 
     @Test
     void buscarClientes_TamanoDePaginaInvalido_Devuelve400() throws Exception {
         mockMvc.perform(get("/clientes/buscar")
-                        .param("tamano", "500"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"tamano\":500}"))
                 .andExpect(status().isBadRequest());
 
         verify(clienteService, never()).buscarClientes(any());

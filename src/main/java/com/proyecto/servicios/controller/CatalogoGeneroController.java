@@ -17,7 +17,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -34,23 +33,35 @@ public class CatalogoGeneroController {
         this.catalogoGeneroService = catalogoGeneroService;
     }
 
-    @Operation(summary = "Consultar género por ID")
+    @Operation(summary = "Consultar género por ID",
+            requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(required = true,
+                    description = "Identificador del registro: {\"id\":1}",
+                    content = @io.swagger.v3.oas.annotations.media.Content(schema = @io.swagger.v3.oas.annotations.media.Schema(
+                            implementation = CatalogoIdRequest.class))))
     @GetMapping(value = "/catalogos/genero/consultar", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ApiResponse<CatalogoGeneroResponse>> obtenerPorId(
+            @io.swagger.v3.oas.annotations.Parameter(hidden = true)
             @Valid @RequestBody CatalogoIdRequest request) {
         CatalogoGeneroResponse genero = catalogoGeneroService.obtenerPorId(request.getId());
         return ResponseEntity.ok(ApiResponse.of(ApiResponseEnum.OK, genero));
     }
 
     @Operation(summary = "Consultar géneros con filtros",
-            description = "Todos los criterios son opcionales y combinables y se envían como parámetros de consulta "
-                    + "(query params): ?tipo=...&pagina=0&tamano=10. Sin parámetros devuelve todos los géneros. "
-                    + "'tipo' aplica coincidencia parcial sin distinguir mayúsculas. "
-                    + "La paginación se controla con 'pagina' (base 0) y 'tamano'.")
+            description = "Todos los criterios son opcionales y combinables y se envían en el cuerpo (DTO): "
+                    + "{\"tipo\":\"...\",\"pagina\":0,\"tamano\":10}. Sin cuerpo (o cuerpo vacío) devuelve "
+                    + "todos los géneros paginados. 'tipo' aplica coincidencia parcial sin distinguir mayúsculas. "
+                    + "La paginación se controla con 'pagina' (base 0) y 'tamano'; la respuesta incluye "
+                    + "'pagina', 'totalPaginas', 'totalElementos' y 'esUltima'.",
+            requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(required = false,
+                    description = "Criterios de búsqueda y paginación, todos opcionales. Ejemplo: {\"tipo\":\"...\",\"pagina\":1,\"tamano\":10}",
+                    content = @io.swagger.v3.oas.annotations.media.Content(schema = @io.swagger.v3.oas.annotations.media.Schema(
+                            implementation = CatalogoGeneroSearchRequest.class))))
     @GetMapping(value = "/catalogos/genero/buscar", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ApiResponse<PageResponse<CatalogoGeneroResponse>>> buscar(
-            @Valid @ModelAttribute CatalogoGeneroSearchRequest request) {
-        Page<CatalogoGeneroResponse> generos = catalogoGeneroService.buscar(request);
+            @io.swagger.v3.oas.annotations.Parameter(hidden = true)
+            @Valid @RequestBody(required = false) CatalogoGeneroSearchRequest request) {
+        CatalogoGeneroSearchRequest filtros = request != null ? request : new CatalogoGeneroSearchRequest();
+        Page<CatalogoGeneroResponse> generos = catalogoGeneroService.buscar(filtros);
         return ResponseEntity.ok(ApiResponse.of(ApiResponseEnum.OK, PageResponse.desde(generos)));
     }
 

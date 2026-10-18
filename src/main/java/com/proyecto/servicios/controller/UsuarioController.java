@@ -17,7 +17,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -36,23 +35,36 @@ public class UsuarioController {
 
     @Operation(summary = "Consultar usuario por ID",
             description = "Método GET con el identificador enviado en el cuerpo (DTO) para respetar la "
-                    + "restricción de no usar @PathVariable ni @RequestParam.")
+                    + "restricción de no usar @PathVariable ni @RequestParam.",
+            requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(required = true,
+                    description = "Identificador del usuario: {\"id\":1}",
+                    content = @io.swagger.v3.oas.annotations.media.Content(schema = @io.swagger.v3.oas.annotations.media.Schema(
+                            implementation = UsuarioIdRequest.class))))
     @GetMapping(value = "/usuarios/consultar", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<ApiResponse<UsuarioResponse>> obtenerUsuario(@Valid @RequestBody UsuarioIdRequest request) {
+    public ResponseEntity<ApiResponse<UsuarioResponse>> obtenerUsuario(
+            @io.swagger.v3.oas.annotations.Parameter(hidden = true)
+            @Valid @RequestBody UsuarioIdRequest request) {
         UsuarioResponse usuario = usuarioService.obtenerUsuario(request.getId());
         return ResponseEntity.ok(ApiResponse.of(ApiResponseEnum.OK, usuario));
     }
 
     @Operation(summary = "Consultar usuarios con filtros y paginación",
-            description = "Todos los criterios son opcionales y combinables y se envían como parámetros de consulta "
-                    + "(query params): ?correo=...&clienteId=...&activos=true&pagina=0&tamano=10. "
-                    + "Sin criterios devuelve todos los usuarios. "
+            description = "Todos los criterios son opcionales y combinables y se envían en el cuerpo (DTO): "
+                    + "{\"correo\":\"...\",\"clienteId\":1,\"activos\":true,\"pagina\":0,\"tamano\":10}. "
+                    + "Sin cuerpo (o cuerpo vacío) devuelve todos los usuarios paginados. "
                     + "'correo' aplica coincidencia parcial sin distinguir mayúsculas; 'activos': true = solo activos, false = solo inactivos. "
-                    + "La paginación se controla con 'pagina' (base 0) y 'tamano'.")
+                    + "La paginación se controla con 'pagina' (base 0) y 'tamano'; la respuesta incluye "
+                    + "'pagina', 'totalPaginas', 'totalElementos' y 'esUltima'.",
+            requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(required = false,
+                    description = "Criterios de búsqueda y paginación, todos opcionales. Ejemplo: {\"correo\":\"...\",\"pagina\":1,\"tamano\":10}",
+                    content = @io.swagger.v3.oas.annotations.media.Content(schema = @io.swagger.v3.oas.annotations.media.Schema(
+                            implementation = UsuarioSearchRequest.class))))
     @GetMapping(value = "/usuarios/buscar", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ApiResponse<PageResponse<UsuarioResponse>>> buscarUsuarios(
-            @Valid @ModelAttribute UsuarioSearchRequest request) {
-        Page<UsuarioResponse> usuarios = usuarioService.buscarUsuarios(request);
+            @io.swagger.v3.oas.annotations.Parameter(hidden = true)
+            @Valid @RequestBody(required = false) UsuarioSearchRequest request) {
+        UsuarioSearchRequest filtro = request != null ? request : new UsuarioSearchRequest();
+        Page<UsuarioResponse> usuarios = usuarioService.buscarUsuarios(filtro);
         return ResponseEntity.ok(ApiResponse.of(ApiResponseEnum.OK, PageResponse.desde(usuarios)));
     }
 

@@ -18,6 +18,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
@@ -127,9 +128,10 @@ class UsuarioControllerTest {
     }
 
     @Test
-    void buscarUsuarios_ParametroInvalido_Devuelve400() throws Exception {
+    void buscarUsuarios_CuerpoInvalido_Devuelve400() throws Exception {
         mockMvc.perform(get("/usuarios/buscar")
-                        .param("clienteId", "-5"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"clienteId\":-5}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
 
@@ -139,17 +141,16 @@ class UsuarioControllerTest {
     @Test
     void buscarUsuarios_FiltrosCombinados_PasaElDtoAlServicio() throws Exception {
         when(usuarioService.buscarUsuarios(any(UsuarioSearchRequest.class)))
-                .thenReturn(new PageImpl<>(List.of(usuarioResponse)));
+                .thenReturn(new PageImpl<>(List.of(usuarioResponse), PageRequest.of(0, 10), 1));
 
         mockMvc.perform(get("/usuarios/buscar")
-                        .param("correo", "juan")
-                        .param("clienteId", "1")
-                        .param("activos", "true")
-                        .param("pagina", "0")
-                        .param("tamano", "10"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"correo\":\"juan\",\"clienteId\":1,\"activos\":true,\"pagina\":0,\"tamano\":10}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.contenido[0].correo").value("juan@email.com"))
-                .andExpect(jsonPath("$.data.pagina").value(0));
+                .andExpect(jsonPath("$.data.pagina").value(0))
+                .andExpect(jsonPath("$.data.tamano").value(10))
+                .andExpect(jsonPath("$.data.totalPaginas").value(1));
 
         ArgumentCaptor<UsuarioSearchRequest> captor = ArgumentCaptor.forClass(UsuarioSearchRequest.class);
         verify(usuarioService).buscarUsuarios(captor.capture());
@@ -165,9 +166,12 @@ class UsuarioControllerTest {
         when(usuarioService.buscarUsuarios(any(UsuarioSearchRequest.class)))
                 .thenReturn(new PageImpl<>(List.of(usuarioResponse)));
 
-        mockMvc.perform(get("/usuarios/buscar"))
+        mockMvc.perform(get("/usuarios/buscar")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.contenido.length()").value(1));
+                .andExpect(jsonPath("$.data.contenido.length()").value(1))
+                .andExpect(jsonPath("$.data.pagina").value(0));
     }
 
     @Test
