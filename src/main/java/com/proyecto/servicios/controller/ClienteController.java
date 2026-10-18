@@ -18,7 +18,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -37,22 +36,37 @@ public class ClienteController {
 
     @Operation(summary = "Consultar cliente por ID",
             description = "Método GET con el identificador enviado en el cuerpo (DTO) para respetar la "
-                    + "restricción de no usar @PathVariable ni @RequestParam.")
+                    + "restricción de no usar @PathVariable ni @RequestParam.",
+            requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(required = true,
+                    description = "Identificador del cliente: {\"id\":1}",
+                    content = @io.swagger.v3.oas.annotations.media.Content(schema = @io.swagger.v3.oas.annotations.media.Schema(
+                            implementation = ClienteIdRequest.class))))
     @GetMapping(value = "/clientes/consultar", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<ApiResponse<ClienteResponse>> obtenerCliente(@Valid @RequestBody ClienteIdRequest request) {
+    public ResponseEntity<ApiResponse<ClienteResponse>> obtenerCliente(
+            @io.swagger.v3.oas.annotations.Parameter(hidden = true)
+            @Valid @RequestBody ClienteIdRequest request) {
         ClienteResponse cliente = clienteService.obtenerCliente(request.getId());
         return ResponseEntity.ok(ApiResponse.of(ApiResponseEnum.OK, cliente));
     }
 
     @Operation(summary = "Buscar clientes con filtros (GET)",
-            description = "Todos los criterios son opcionales y combinables y se envían como parámetros de consulta "
-                    + "(query params): ?nombre=...&curp=...&pagina=0&tamano=10. Cubre las consultas por nombre, "
-                    + "apellidos, CURP, RFC, correo, número de cuenta, estado activo y rango de fechas "
-                    + "(fechaInicio/fechaFin con formato yyyy-MM-dd). Sin parámetros devuelve todos los clientes paginados.")
+            description = "Todos los criterios son opcionales y combinables y se envían en el cuerpo (DTO): "
+                    + "{\"nombre\":\"...\",\"curp\":\"...\",\"pagina\":0,\"tamano\":10}. "
+                    + "Sin cuerpo (o cuerpo vacío) devuelve todos los clientes paginados. "
+                    + "Cubre las consultas por nombre, apellidos, CURP, RFC, correo, número de cuenta, "
+                    + "estado activo y rango de fechas (fechaInicio/fechaFin con formato yyyy-MM-dd). "
+                    + "La paginación se controla con 'pagina' (base 0) y 'tamano'; la respuesta incluye "
+                    + "'pagina', 'totalPaginas', 'totalElementos' y 'esUltima'.",
+            requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(required = false,
+                    description = "Criterios de búsqueda y paginación, todos opcionales. Ejemplo: {\"curp\":\"...\",\"pagina\":1,\"tamano\":10}",
+                    content = @io.swagger.v3.oas.annotations.media.Content(schema = @io.swagger.v3.oas.annotations.media.Schema(
+                            implementation = ClienteSearchRequest.class))))
     @GetMapping(value = "/clientes/buscar", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ApiResponse<PageResponse<ClienteResponse>>> buscarClientes(
-            @Valid @ModelAttribute ClienteSearchRequest request) {
-        Page<ClienteResponse> page = clienteService.buscarClientes(request);
+            @io.swagger.v3.oas.annotations.Parameter(hidden = true)
+            @Valid @RequestBody(required = false) ClienteSearchRequest request) {
+        ClienteSearchRequest filtro = request != null ? request : new ClienteSearchRequest();
+        Page<ClienteResponse> page = clienteService.buscarClientes(filtro);
         return ResponseEntity.ok(ApiResponse.of(ApiResponseEnum.OK, PageResponse.desde(page)));
     }
 

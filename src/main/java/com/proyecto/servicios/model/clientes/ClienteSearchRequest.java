@@ -6,7 +6,6 @@ import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.springframework.format.annotation.DateTimeFormat;
 
 /**
  * Criterios de búsqueda de clientes. Todos los filtros son opcionales y
@@ -58,11 +57,9 @@ public class ClienteSearchRequest extends PaginaRequest {
 
     /** Fecha mínima de creación del cliente (inclusive), formato yyyy-MM-dd. Filtro combinable. */
     @JsonFormat(pattern = "yyyy-MM-dd")
-    @DateTimeFormat(pattern = "yyyy-MM-dd")
     private java.util.Date fechaInicio;
 
     /** Fecha máxima de creación del cliente (inclusive), formato yyyy-MM-dd. Filtro combinable. */
     @JsonFormat(pattern = "yyyy-MM-dd")
-    @DateTimeFormat(pattern = "yyyy-MM-dd")
     private java.util.Date fechaFin;
 }

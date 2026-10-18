@@ -15,6 +15,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
@@ -32,9 +33,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 /**
  * Verifica el contrato HTTP de los endpoints GET de {@code PersonaController}:
- * método GET con los criterios y la paginación como parámetros de consulta
- * (query params, sin {@code @PathVariable}/{@code @RequestParam}), validación
- * con {@code @Valid}, paginación y códigos de estado.
+ * método GET con el DTO de criterios (filtros y paginación opcionales) en el
+ * cuerpo vía {@code @RequestBody} (sin {@code @PathVariable}/{@code @RequestParam}),
+ * validación con {@code @Valid}, paginación y códigos de estado.
  */
 @ExtendWith(MockitoExtension.class)
 class PersonaControllerTest {
@@ -75,33 +76,37 @@ class PersonaControllerTest {
     @Test
     void buscarPersonas_FiltrosCombinados_PasaElDtoAlServicio() throws Exception {
         when(personaService.buscarPersonas(any(PersonasSearchRequest.class)))
-                .thenReturn(new PageImpl<>(List.of(personaResponse)));
+                .thenReturn(new PageImpl<>(List.of(personaResponse), PageRequest.of(0, 5), 1));
 
         mockMvc.perform(get(BUSCAR)
-                        .param("nombre", "Juan")
-                        .param("apellidoP", "Perez")
-                        .param("pagina", "0")
-                        .param("tamano", "5"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"nombre\":\"Juan\",\"apellidoP\":\"Perez\",\"pagina\":0,\"tamano\":5}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.contenido[0].nombre").value("Juan"))
                 .andExpect(jsonPath("$.data.contenido[0].apellidoP").value("Perez"))
-                .andExpect(jsonPath("$.data.totalElementos").value(1));
+                .andExpect(jsonPath("$.data.totalElementos").value(1))
+                .andExpect(jsonPath("$.data.pagina").value(0))
+                .andExpect(jsonPath("$.data.tamano").value(5))
+                .andExpect(jsonPath("$.data.totalPaginas").value(1));
 
         ArgumentCaptor<PersonasSearchRequest> captor = ArgumentCaptor.forClass(PersonasSearchRequest.class);
         verify(personaService).buscarPersonas(captor.capture());
         assertEquals("Juan", captor.getValue().getNombre());
         assertEquals("Perez", captor.getValue().getApellidoP());
+        assertEquals(0, captor.getValue().getPagina());
         assertEquals(5, captor.getValue().getTamano());
     }
 
     @Test
     void buscarPersonas_SinCuerpo_Devuelve200ConPaginaPorDefecto() throws Exception {
         when(personaService.buscarPersonas(any(PersonasSearchRequest.class)))
-                .thenReturn(new PageImpl<>(List.of(personaResponse)));
+                .thenReturn(new PageImpl<>(List.of(personaResponse), PageRequest.of(0, 10), 1));
 
         mockMvc.perform(get(BUSCAR))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.contenido.length()").value(1));
+                .andExpect(jsonPath("$.data.contenido.length()").value(1))
+                .andExpect(jsonPath("$.data.pagina").value(0))
+                .andExpect(jsonPath("$.data.tamano").value(10));
 
         ArgumentCaptor<PersonasSearchRequest> captor = ArgumentCaptor.forClass(PersonasSearchRequest.class);
         verify(personaService).buscarPersonas(captor.capture());
@@ -112,7 +117,8 @@ class PersonaControllerTest {
     @Test
     void buscarPersonas_PaginaNegativa_Devuelve400() throws Exception {
         mockMvc.perform(get(BUSCAR)
-                        .param("pagina", "-1"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"pagina\":-1}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
 
@@ -124,7 +130,8 @@ class PersonaControllerTest {
         when(personaService.obtenerPersona("Juan")).thenReturn(personaResponse);
 
         mockMvc.perform(get(CONSULTAR)
-                        .param("nombre", "Juan"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"nombre\":\"Juan\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.nombre").value("Juan"))
                 .andExpect(jsonPath("$.data.apellidoMaterno").value("Lopez"));
@@ -137,7 +144,8 @@ class PersonaControllerTest {
                         HttpStatus.NOT_FOUND));
 
         mockMvc.perform(get(CONSULTAR)
-                        .param("nombre", "Pedro"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"nombre\":\"Pedro\"}"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("PERSONA_ERROR"))
                 .andExpect(jsonPath("$.message").exists());
@@ -146,7 +154,8 @@ class PersonaControllerTest {
     @Test
     void obtenerPersona_NombreEnBlanco_Devuelve400() throws Exception {
         mockMvc.perform(get(CONSULTAR)
-                        .param("nombre", "  "))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"nombre\":\"  \"}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
 

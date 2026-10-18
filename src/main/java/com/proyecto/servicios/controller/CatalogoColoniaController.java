@@ -17,7 +17,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -34,23 +33,35 @@ public class CatalogoColoniaController {
         this.catalogoColoniaService = catalogoColoniaService;
     }
 
-    @Operation(summary = "Consultar colonia por ID")
+    @Operation(summary = "Consultar colonia por ID",
+            requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(required = true,
+                    description = "Identificador del registro: {\"id\":1}",
+                    content = @io.swagger.v3.oas.annotations.media.Content(schema = @io.swagger.v3.oas.annotations.media.Schema(
+                            implementation = CatalogoIdRequest.class))))
     @GetMapping(value = "/catalogos/colonia/consultar", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ApiResponse<CatalogoColoniaResponse>> obtenerPorId(
+            @io.swagger.v3.oas.annotations.Parameter(hidden = true)
             @Valid @RequestBody CatalogoIdRequest request) {
         CatalogoColoniaResponse colonia = catalogoColoniaService.obtenerPorId(request.getId());
         return ResponseEntity.ok(ApiResponse.of(ApiResponseEnum.OK, colonia));
     }
 
     @Operation(summary = "Buscar colonias con filtros",
-            description = "Todos los criterios son opcionales y combinables y se envían como parámetros de consulta "
-                    + "(query params): ?nombre=...&municipioId=...&pagina=0&tamano=10. Sin parámetros devuelve todas "
-                    + "las colonias. 'nombre' aplica coincidencia parcial sin distinguir mayúsculas. "
-                    + "La paginación se controla con 'pagina' (base 0) y 'tamano'.")
+            description = "Todos los criterios son opcionales y combinables y se envían en el cuerpo (DTO): "
+                    + "{\"nombre\":\"...\",\"municipioId\":1,\"pagina\":0,\"tamano\":10}. Sin cuerpo (o cuerpo "
+                    + "vacío) devuelve todas las colonias paginadas. 'nombre' aplica coincidencia parcial sin "
+                    + "distinguir mayúsculas. La paginación se controla con 'pagina' (base 0) y 'tamano'; "
+                    + "la respuesta incluye 'pagina', 'totalPaginas', 'totalElementos' y 'esUltima'.",
+            requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(required = false,
+                    description = "Criterios de búsqueda y paginación, todos opcionales. Ejemplo: {\"nombre\":\"...\",\"pagina\":1,\"tamano\":10}",
+                    content = @io.swagger.v3.oas.annotations.media.Content(schema = @io.swagger.v3.oas.annotations.media.Schema(
+                            implementation = CatalogoColoniaSearchRequest.class))))
     @GetMapping(value = "/catalogos/colonia/buscar", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ApiResponse<PageResponse<CatalogoColoniaResponse>>> buscar(
-            @Valid @ModelAttribute CatalogoColoniaSearchRequest request) {
-        Page<CatalogoColoniaResponse> pagina = catalogoColoniaService.buscar(request);
+            @io.swagger.v3.oas.annotations.Parameter(hidden = true)
+            @Valid @RequestBody(required = false) CatalogoColoniaSearchRequest request) {
+        CatalogoColoniaSearchRequest filtros = request != null ? request : new CatalogoColoniaSearchRequest();
+        Page<CatalogoColoniaResponse> pagina = catalogoColoniaService.buscar(filtros);
         return ResponseEntity.ok(ApiResponse.of(ApiResponseEnum.OK, PageResponse.desde(pagina)));
     }
 

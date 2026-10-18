@@ -17,7 +17,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -38,32 +37,50 @@ public class CuentaController {
     // Consultar cuenta por número
     @Operation(summary = "Consultar cuenta por número",
             description = "Método GET con el número de cuenta enviado en el cuerpo (DTO) para respetar la "
-                    + "restricción de no usar @PathVariable ni @RequestParam.")
+                    + "restricción de no usar @PathVariable ni @RequestParam.",
+            requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(required = true,
+                    description = "Número de cuenta: {\"numeroCuenta\":\"...\"}",
+                    content = @io.swagger.v3.oas.annotations.media.Content(schema = @io.swagger.v3.oas.annotations.media.Schema(
+                            implementation = CuentaNumeroRequest.class))))
     @GetMapping(value = "/cuentas/consultar", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ApiResponse<CuentaResponse>> obtenerCuentaPorNumero(
+            @io.swagger.v3.oas.annotations.Parameter(hidden = true)
             @Valid @RequestBody CuentaNumeroRequest request) {
         CuentaResponse cuenta = cuentaService.obtenerCuentaPorNumero(request.getNumeroCuenta());
         return ResponseEntity.ok(ApiResponse.of(ApiResponseEnum.OK, cuenta));
     }
 
     @Operation(summary = "Consultar cuentas con filtros (GET)",
-            description = "Todos los criterios son opcionales y combinables y se envían como parámetros de consulta "
-                    + "(query params): ?clienteId=...&activas=true&estatus=ACTIVA&pagina=0&tamano=10. "
+            description = "Todos los criterios son opcionales y combinables y se envían en el cuerpo (DTO): "
+                    + "{\"clienteId\":1,\"activas\":true,\"estatus\":\"ACTIVA\",\"pagina\":0,\"tamano\":10}. "
+                    + "Sin cuerpo (o cuerpo vacío) devuelve todas las cuentas paginadas. "
                     + "'clienteId' filtra las cuentas de un cliente; 'activas': true = solo cuentas ACTIVAS, "
                     + "false = solo no activas; 'estatus' filtra por estatus (ACTIVA/BLOQUEADA/INACTIVA/CANCELADA). "
-                    + "Sin parámetros devuelve todas las cuentas paginadas.")
+                    + "La paginación se controla con 'pagina' (base 0) y 'tamano'; la respuesta incluye "
+                    + "'pagina', 'totalPaginas', 'totalElementos' y 'esUltima'.",
+            requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(required = false,
+                    description = "Criterios de búsqueda y paginación, todos opcionales. Ejemplo: {\"clienteId\":1,\"pagina\":1,\"tamano\":10}",
+                    content = @io.swagger.v3.oas.annotations.media.Content(schema = @io.swagger.v3.oas.annotations.media.Schema(
+                            implementation = CuentaSearchRequest.class))))
     @GetMapping(value = "/cuentas/buscar", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ApiResponse<PageResponse<CuentaResponse>>> buscarCuentas(
-            @Valid @ModelAttribute CuentaSearchRequest request) {
-        Page<CuentaResponse> cuentas = cuentaService.buscarCuentas(request);
+            @io.swagger.v3.oas.annotations.Parameter(hidden = true)
+            @Valid @RequestBody(required = false) CuentaSearchRequest request) {
+        CuentaSearchRequest filtro = request != null ? request : new CuentaSearchRequest();
+        Page<CuentaResponse> cuentas = cuentaService.buscarCuentas(filtro);
         return ResponseEntity.ok(ApiResponse.of(ApiResponseEnum.OK, PageResponse.desde(cuentas)));
     }
 
     // Consultar saldo de una cuenta
     @Operation(summary = "Consultar saldo de cuenta",
-            description = "Método GET con el número de cuenta enviado en el cuerpo (DTO).")
+            description = "Método GET con el número de cuenta enviado en el cuerpo (DTO).",
+            requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(required = true,
+                    description = "Número de cuenta: {\"numeroCuenta\":\"...\"}",
+                    content = @io.swagger.v3.oas.annotations.media.Content(schema = @io.swagger.v3.oas.annotations.media.Schema(
+                            implementation = CuentaNumeroRequest.class))))
     @GetMapping(value = "/cuentas/saldo", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ApiResponse<BigDecimal>> consultarSaldo(
+            @io.swagger.v3.oas.annotations.Parameter(hidden = true)
             @Valid @RequestBody CuentaNumeroRequest request) {
         CuentaResponse cuenta = cuentaService.obtenerCuentaPorNumero(request.getNumeroCuenta());
         return ResponseEntity.ok(ApiResponse.of(ApiResponseEnum.OK, cuenta.getSaldo()));
