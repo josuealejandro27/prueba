@@ -5,8 +5,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.proyecto.servicios.entity.clientes.PersonaFisica;
 import com.proyecto.servicios.entity.clientes.Usuario;
+import com.proyecto.servicios.exception.CorreoDuplicadoException;
 import com.proyecto.servicios.exception.GlobalExceptionHandler;
-import com.proyecto.servicios.exception.UsuarioException;
+import com.proyecto.servicios.exception.UsuarioNoEncontradoException;
 import com.proyecto.servicios.model.clientes.UsuarioCreateRequest;
 import com.proyecto.servicios.model.clientes.UsuarioResponse;
 import com.proyecto.servicios.model.clientes.UsuarioSearchRequest;
@@ -19,7 +20,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.test.web.servlet.MockMvc;
@@ -129,7 +129,7 @@ class UsuarioControllerTest {
 
     @Test
     void buscarUsuarios_CuerpoInvalido_Devuelve400() throws Exception {
-        mockMvc.perform(get("/usuarios/buscar")
+        mockMvc.perform(post("/usuarios/buscar")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"clienteId\":-5}"))
                 .andExpect(status().isBadRequest())
@@ -143,7 +143,7 @@ class UsuarioControllerTest {
         when(usuarioService.buscarUsuarios(any(UsuarioSearchRequest.class)))
                 .thenReturn(new PageImpl<>(List.of(usuarioResponse), PageRequest.of(0, 10), 1));
 
-        mockMvc.perform(get("/usuarios/buscar")
+        mockMvc.perform(post("/usuarios/buscar")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"correo\":\"juan\",\"clienteId\":1,\"activos\":true,\"pagina\":0,\"tamano\":10}"))
                 .andExpect(status().isOk())
@@ -166,7 +166,7 @@ class UsuarioControllerTest {
         when(usuarioService.buscarUsuarios(any(UsuarioSearchRequest.class)))
                 .thenReturn(new PageImpl<>(List.of(usuarioResponse)));
 
-        mockMvc.perform(get("/usuarios/buscar")
+        mockMvc.perform(post("/usuarios/buscar")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{}"))
                 .andExpect(status().isOk())
@@ -177,20 +177,20 @@ class UsuarioControllerTest {
     @Test
     void obtenerUsuario_NoExistente_Devuelve404() throws Exception {
         when(usuarioService.obtenerUsuario(99L))
-                .thenThrow(new UsuarioException("USUARIO_ERROR", "Usuario no encontrado con ID: 99", HttpStatus.NOT_FOUND));
+                .thenThrow(new UsuarioNoEncontradoException(99L));
 
-        mockMvc.perform(get("/usuarios/consultar")
+        mockMvc.perform(post("/usuarios/consultar")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"id\":99}"))
                 .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.code").value("USUARIO_ERROR"));
+                .andExpect(jsonPath("$.code").value("USUARIO_NO_ENCONTRADO"));
     }
 
     @Test
     void desactivarUsuario_DatosValidos_Devuelve200() throws Exception {
         when(usuarioService.desactivarUsuario(1L)).thenReturn(usuarioResponse);
 
-        mockMvc.perform(patch("/usuarios/desactivar")
+        mockMvc.perform(post("/usuarios/desactivar")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"id\":1}"))
                 .andExpect(status().isOk())
@@ -199,7 +199,7 @@ class UsuarioControllerTest {
 
     @Test
     void activarUsuario_IdNulo_Devuelve400() throws Exception {
-        mockMvc.perform(patch("/usuarios/activar")
+        mockMvc.perform(post("/usuarios/activar")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{}"))
                 .andExpect(status().isBadRequest())
@@ -211,14 +211,13 @@ class UsuarioControllerTest {
     @Test
     void crearUsuario_CorreoDuplicado_Devuelve409ConEstructuraUniforme() throws Exception {
         when(usuarioService.crearUsuario(any(UsuarioCreateRequest.class)))
-                .thenThrow(new UsuarioException("USUARIO_ERROR", "Ya existe un usuario con el correo: juan@email.com",
-                        HttpStatus.CONFLICT));
+                .thenThrow(new CorreoDuplicadoException("juan@email.com"));
 
         mockMvc.perform(post("/usuarios/agregar")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"clienteId\":1,\"correo\":\"juan@email.com\",\"password\":\"Password123!\"}"))
                 .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.code").value("USUARIO_ERROR"))
+                .andExpect(jsonPath("$.code").value("CORREO_DUPLICADO"))
                 .andExpect(jsonPath("$.message").exists())
                 .andExpect(jsonPath("$.timestamp").exists());
     }
@@ -227,11 +226,11 @@ class UsuarioControllerTest {
     void errorInesperado_Devuelve500ConEstructuraUniforme() throws Exception {
         when(usuarioService.obtenerUsuario(1L)).thenThrow(new IllegalStateException("boom"));
 
-        mockMvc.perform(get("/usuarios/consultar")
+        mockMvc.perform(post("/usuarios/consultar")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"id\":1}"))
                 .andExpect(status().isInternalServerError())
                 .andExpect(jsonPath("$.code").value("ERROR_INTERNO"))
-                .andExpect(jsonPath("$.message").value("Ocurrió un error interno en el servidor"));
+                .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("No se pudo completar la operación")));
     }
 }

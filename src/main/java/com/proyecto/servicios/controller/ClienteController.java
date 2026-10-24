@@ -17,10 +17,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -35,13 +32,13 @@ public class ClienteController {
     }
 
     @Operation(summary = "Consultar cliente por ID",
-            description = "Método GET con el identificador enviado en el cuerpo (DTO) para respetar la "
+            description = "Método POST con el identificador enviado en el cuerpo (DTO) para respetar la "
                     + "restricción de no usar @PathVariable ni @RequestParam.",
             requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(required = true,
                     description = "Identificador del cliente: {\"id\":1}",
                     content = @io.swagger.v3.oas.annotations.media.Content(schema = @io.swagger.v3.oas.annotations.media.Schema(
                             implementation = ClienteIdRequest.class))))
-    @GetMapping(value = "/clientes/consultar", produces = MediaType.APPLICATION_JSON_VALUE)
+    @PostMapping(value = "/clientes/consultar", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ApiResponse<ClienteResponse>> obtenerCliente(
             @io.swagger.v3.oas.annotations.Parameter(hidden = true)
             @Valid @RequestBody ClienteIdRequest request) {
@@ -49,7 +46,7 @@ public class ClienteController {
         return ResponseEntity.ok(ApiResponse.of(ApiResponseEnum.OK, cliente));
     }
 
-    @Operation(summary = "Buscar clientes con filtros (GET)",
+    @Operation(summary = "Buscar clientes con filtros (POST)",
             description = "Todos los criterios son opcionales y combinables y se envían en el cuerpo (DTO): "
                     + "{\"nombre\":\"...\",\"curp\":\"...\",\"pagina\":0,\"tamano\":10}. "
                     + "Sin cuerpo (o cuerpo vacío) devuelve todos los clientes paginados. "
@@ -61,7 +58,7 @@ public class ClienteController {
                     description = "Criterios de búsqueda y paginación, todos opcionales. Ejemplo: {\"curp\":\"...\",\"pagina\":1,\"tamano\":10}",
                     content = @io.swagger.v3.oas.annotations.media.Content(schema = @io.swagger.v3.oas.annotations.media.Schema(
                             implementation = ClienteSearchRequest.class))))
-    @GetMapping(value = "/clientes/buscar", produces = MediaType.APPLICATION_JSON_VALUE)
+    @PostMapping(value = "/clientes/buscar", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ApiResponse<PageResponse<ClienteResponse>>> buscarClientes(
             @io.swagger.v3.oas.annotations.Parameter(hidden = true)
             @Valid @RequestBody(required = false) ClienteSearchRequest request) {
@@ -79,7 +76,7 @@ public class ClienteController {
     }
 
     @Operation(summary = "Actualizar cliente (parcial)")
-    @PutMapping(value = "/clientes/actualizar", produces = MediaType.APPLICATION_JSON_VALUE,
+    @PostMapping(value = "/clientes/actualizar", produces = MediaType.APPLICATION_JSON_VALUE,
             consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ApiResponse<ClienteResponse>> actualizarCliente(@Valid @RequestBody ClienteActualizaRequest request) {
         ClienteResponse cliente = clienteService.actualizarCliente(request);
@@ -87,7 +84,7 @@ public class ClienteController {
     }
 
     @Operation(summary = "Desactivar cliente (baja lógica)")
-    @PatchMapping(value = "/clientes/desactivar", produces = MediaType.APPLICATION_JSON_VALUE,
+    @PostMapping(value = "/clientes/desactivar", produces = MediaType.APPLICATION_JSON_VALUE,
             consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ApiResponse<ClienteResponse>> desactivarCliente(@Valid @RequestBody ClienteIdRequest request) {
         ClienteResponse cliente = clienteService.desactivarCliente(request.getId());
@@ -95,7 +92,7 @@ public class ClienteController {
     }
 
     @Operation(summary = "Activar cliente")
-    @PatchMapping(value = "/clientes/activar", produces = MediaType.APPLICATION_JSON_VALUE,
+    @PostMapping(value = "/clientes/activar", produces = MediaType.APPLICATION_JSON_VALUE,
             consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ApiResponse<ClienteResponse>> activarCliente(@Valid @RequestBody ClienteIdRequest request) {
         ClienteResponse cliente = clienteService.activarCliente(request.getId());
@@ -103,7 +100,7 @@ public class ClienteController {
     }
 
     @Operation(summary = "Bloquear/desbloquear cuenta")
-    @PatchMapping(value = "/clientes/bloquear-cuenta", produces = MediaType.APPLICATION_JSON_VALUE,
+    @PostMapping(value = "/clientes/bloquear-cuenta", produces = MediaType.APPLICATION_JSON_VALUE,
             consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ApiResponse<ClienteResponse>> bloquearCuenta(@Valid @RequestBody ClienteBloqueoRequest request) {
         ClienteResponse cliente = clienteService.bloquearCuenta(request.getId(), request.getBloqueado());
@@ -111,7 +108,7 @@ public class ClienteController {
     }
 
     @Operation(summary = "Bloquear/desbloquear login")
-    @PatchMapping(value = "/clientes/bloquear-login", produces = MediaType.APPLICATION_JSON_VALUE,
+    @PostMapping(value = "/clientes/bloquear-login", produces = MediaType.APPLICATION_JSON_VALUE,
             consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ApiResponse<ClienteResponse>> bloquearLogin(@Valid @RequestBody ClienteBloqueoRequest request) {
         ClienteResponse cliente = clienteService.bloquearLogin(request.getId(), request.getBloqueado());

@@ -2,6 +2,7 @@ package com.proyecto.servicios.service.Impl;
 
 import com.proyecto.servicios.entity.clientes.CuentaBancaria;
 import com.proyecto.servicios.entity.clientes.PersonaFisica;
+import com.proyecto.servicios.exception.ClienteException;
 import com.proyecto.servicios.exception.CuentaException;
 import com.proyecto.servicios.exception.ValidationException;
 import com.proyecto.servicios.model.clientes.CuentaResponse;
@@ -80,10 +81,6 @@ public class CuentaServiceImpl implements CuentaService {
         CuentaBancaria cuenta = cuentaBancariaRepository.findByNumeroCuenta(numeroCuenta)
                 .orElseThrow(() -> new CuentaException(CODIGO_CUENTA, "Cuenta no encontrada con número: " + numeroCuenta, HttpStatus.NOT_FOUND));
 
-        if (request.getSaldo() != null) {
-            cuenta.setSaldo(request.getSaldo());
-        }
-
         if (request.getEstatus() != null) {
             cuenta.setEstatus(request.getEstatus());
         }
@@ -100,7 +97,8 @@ public class CuentaServiceImpl implements CuentaService {
         log.info("Creando cuenta para cliente con ID: {}", clienteId);
 
         PersonaFisica persona = personaFisicaRepository.findById(clienteId)
-                .orElseThrow(() -> new ValidationException(CODIGO_VALIDACION, "Cliente no encontrado con ID: " + clienteId));
+                .orElseThrow(() -> new ClienteException("CLIENTE_ERROR",
+                        "Cliente no encontrado con ID: " + clienteId, HttpStatus.NOT_FOUND));
 
         if (!persona.isActivo()) {
             throw new ValidationException(CODIGO_VALIDACION, "No se puede crear cuenta para un cliente inactivo");

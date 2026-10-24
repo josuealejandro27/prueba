@@ -5,10 +5,10 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.math.BigDecimal;
-
 /**
  * DTO para actualización parcial de cuenta bancaria.
+ * Solo expone campos que el cliente puede modificar; el saldo, las fechas de
+ * apertura y el identificador son controlados por el servidor y no se reciben aquí.
  */
 @Getter
 @Setter
@@ -17,10 +17,6 @@ public class CuentaUpdateRequest {
 
     @NotBlank(message = "El número de cuenta es obligatorio")
     private String numeroCuenta;
-
-    @DecimalMin(value = "0.0", message = "El saldo no puede ser negativo")
-    @Digits(integer = 8, fraction = 2, message = "El saldo no puede tener más de 8 dígitos enteros y 2 decimales")
-    private BigDecimal saldo;
 
     @Pattern(regexp = "^(ACTIVA|BLOQUEADA|CANCELADA)$", message = "El estatus debe ser ACTIVA, BLOQUEADA o CANCELADA")
     private String estatus;

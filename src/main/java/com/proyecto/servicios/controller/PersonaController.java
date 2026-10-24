@@ -3,9 +3,7 @@ package com.proyecto.servicios.controller;
 import com.proyecto.servicios.enums.ApiResponseEnum;
 import com.proyecto.servicios.model.ApiResponse;
 import com.proyecto.servicios.model.EliminaPersonaRequest;
-import com.proyecto.servicios.model.GenericResponse;
 import com.proyecto.servicios.model.PersonaResponse;
-import com.proyecto.servicios.model.PersonasNombreRequest;
 import com.proyecto.servicios.model.PersonasRequest;
 import com.proyecto.servicios.model.PersonasSearchRequest;
 import com.proyecto.servicios.model.pagination.PageResponse;
@@ -17,10 +15,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -34,21 +29,6 @@ public class PersonaController {
         this.personaService = personaService;
     }
 
-    @Operation(summary = "Consultar persona por nombre",
-            description = "Método GET con el nombre enviado en el cuerpo (DTO) para respetar la "
-                    + "restricción de no usar @PathVariable ni @RequestParam.",
-            requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(required = true,
-                    description = "Nombre de la persona: {\"nombre\":\"Juan\"}",
-                    content = @io.swagger.v3.oas.annotations.media.Content(schema = @io.swagger.v3.oas.annotations.media.Schema(
-                            implementation = PersonasNombreRequest.class))))
-    @GetMapping(value = "/personas/consultar", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<ApiResponse<PersonaResponse>> obtenerPersona(
-            @io.swagger.v3.oas.annotations.Parameter(hidden = true)
-            @Valid @RequestBody PersonasNombreRequest request) {
-        PersonaResponse persona = personaService.obtenerPersona(request.getNombre());
-        return ResponseEntity.ok(ApiResponse.of(ApiResponseEnum.OK, persona));
-    }
-
     @Operation(summary = "Consultar personas con filtros y paginación",
             description = "Todos los criterios son opcionales y combinables y se envían en el cuerpo (DTO): "
                     + "{\"nombre\":\"...\",\"apellidoP\":\"...\",\"pagina\":0,\"tamano\":10}. "
@@ -60,7 +40,7 @@ public class PersonaController {
                     description = "Criterios de búsqueda y paginación, todos opcionales. Ejemplo: {\"nombre\":\"...\",\"pagina\":1,\"tamano\":10}",
                     content = @io.swagger.v3.oas.annotations.media.Content(schema = @io.swagger.v3.oas.annotations.media.Schema(
                             implementation = PersonasSearchRequest.class))))
-    @GetMapping(value = "/personas/buscar", produces = MediaType.APPLICATION_JSON_VALUE)
+    @PostMapping(value = "/personas/buscar", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ApiResponse<PageResponse<PersonaResponse>>> buscarPersonas(
             @io.swagger.v3.oas.annotations.Parameter(hidden = true)
             @Valid @RequestBody(required = false) PersonasSearchRequest request) {
@@ -79,20 +59,20 @@ public class PersonaController {
     }
 
     @Operation(summary = "Actualizar persona")
-    @PutMapping(value = "/personas/actualizar", produces = MediaType.APPLICATION_JSON_VALUE,
+    @PostMapping(value = "/personas/actualizar", produces = MediaType.APPLICATION_JSON_VALUE,
             consumes = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<ApiResponse<GenericResponse>> actualizarPersona(
+    public ResponseEntity<ApiResponse<PersonaResponse>> actualizarPersona(
             @Valid @RequestBody PersonasRequest personasRequest) {
-        GenericResponse respuesta = personaService.actualizaPersona(personasRequest);
-        return ResponseEntity.ok(ApiResponse.of(ApiResponseEnum.OK, respuesta));
+        PersonaResponse persona = personaService.actualizaPersona(personasRequest);
+        return ResponseEntity.ok(ApiResponse.of(ApiResponseEnum.OK, persona));
     }
 
     @Operation(summary = "Eliminar persona")
-    @PatchMapping(value = "/personas/eliminar", produces = MediaType.APPLICATION_JSON_VALUE,
+    @PostMapping(value = "/personas/eliminar", produces = MediaType.APPLICATION_JSON_VALUE,
             consumes = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<ApiResponse<GenericResponse>> eliminarPersona(
+    public ResponseEntity<ApiResponse<Void>> eliminarPersona(
             @Valid @RequestBody EliminaPersonaRequest eliminaPersonaRequest) {
-        GenericResponse respuesta = personaService.eliminaPersona(eliminaPersonaRequest);
-        return ResponseEntity.ok(ApiResponse.of(ApiResponseEnum.OK, respuesta));
+        personaService.eliminaPersona(eliminaPersonaRequest);
+        return ResponseEntity.ok(ApiResponse.of(ApiResponseEnum.OK, null));
     }
 }
