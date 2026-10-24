@@ -16,7 +16,7 @@ public enum ApiResponseEnum {
     CREADO("201", "201", "Recurso creado exitosamente", HttpStatus.CREATED),
     NO_ENCONTRADO("GEN001", "404", "Recurso no encontrado", HttpStatus.NOT_FOUND),
     CATALOGO_NO_DISPONIBLE("CAT001", "404", "El catálogo de productos no se encuentra disponible en caché", HttpStatus.NOT_FOUND),
-    ERROR_INTERNO("ERR001", "500", "Ocurrió un error interno al consultar el catálogo de productos", HttpStatus.INTERNAL_SERVER_ERROR),
+    ERROR_INTERNO("ERR001", "500", "No se pudo completar la operación por un fallo interno del servidor", HttpStatus.INTERNAL_SERVER_ERROR),
     ERROR_COMUNICACION("ERR002", "503", "No fue posible comunicarse con el servicio externo de productos", HttpStatus.SERVICE_UNAVAILABLE),
     ERROR_AUTENTICACION("ERR003", "401", "La autenticación hacia el servicio externo fue rechazada", HttpStatus.UNAUTHORIZED),
     TIMEOUT_SERVICIO("ERR004", "504", "El servicio externo de productos no respondió a tiempo", HttpStatus.GATEWAY_TIMEOUT);

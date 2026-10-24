@@ -16,15 +16,11 @@ import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.math.BigDecimal;
-
-@Tag(name = "Gestión de Cuentas Bancarias", description = "Endpoints para la apertura, consulta de saldo, filtrado y administración de cuentas bancarias")
+@Tag(name = "Gestión de Cuentas Bancarias", description = "Endpoints para la apertura, consulta por número de cuenta, filtrado y administración de cuentas bancarias")
 @RestController
 public class CuentaController {
 
@@ -36,13 +32,13 @@ public class CuentaController {
 
     // Consultar cuenta por número
     @Operation(summary = "Consultar cuenta por número",
-            description = "Método GET con el número de cuenta enviado en el cuerpo (DTO) para respetar la "
+            description = "Método POST con el número de cuenta enviado en el cuerpo (DTO) para respetar la "
                     + "restricción de no usar @PathVariable ni @RequestParam.",
             requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(required = true,
                     description = "Número de cuenta: {\"numeroCuenta\":\"...\"}",
                     content = @io.swagger.v3.oas.annotations.media.Content(schema = @io.swagger.v3.oas.annotations.media.Schema(
                             implementation = CuentaNumeroRequest.class))))
-    @GetMapping(value = "/cuentas/consultar", produces = MediaType.APPLICATION_JSON_VALUE)
+    @PostMapping(value = "/cuentas/consultar", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ApiResponse<CuentaResponse>> obtenerCuentaPorNumero(
             @io.swagger.v3.oas.annotations.Parameter(hidden = true)
             @Valid @RequestBody CuentaNumeroRequest request) {
@@ -50,7 +46,7 @@ public class CuentaController {
         return ResponseEntity.ok(ApiResponse.of(ApiResponseEnum.OK, cuenta));
     }
 
-    @Operation(summary = "Consultar cuentas con filtros (GET)",
+    @Operation(summary = "Consultar cuentas con filtros (POST)",
             description = "Todos los criterios son opcionales y combinables y se envían en el cuerpo (DTO): "
                     + "{\"clienteId\":1,\"activas\":true,\"estatus\":\"ACTIVA\",\"pagina\":0,\"tamano\":10}. "
                     + "Sin cuerpo (o cuerpo vacío) devuelve todas las cuentas paginadas. "
@@ -62,28 +58,13 @@ public class CuentaController {
                     description = "Criterios de búsqueda y paginación, todos opcionales. Ejemplo: {\"clienteId\":1,\"pagina\":1,\"tamano\":10}",
                     content = @io.swagger.v3.oas.annotations.media.Content(schema = @io.swagger.v3.oas.annotations.media.Schema(
                             implementation = CuentaSearchRequest.class))))
-    @GetMapping(value = "/cuentas/buscar", produces = MediaType.APPLICATION_JSON_VALUE)
+    @PostMapping(value = "/cuentas/buscar", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ApiResponse<PageResponse<CuentaResponse>>> buscarCuentas(
             @io.swagger.v3.oas.annotations.Parameter(hidden = true)
             @Valid @RequestBody(required = false) CuentaSearchRequest request) {
         CuentaSearchRequest filtro = request != null ? request : new CuentaSearchRequest();
         Page<CuentaResponse> cuentas = cuentaService.buscarCuentas(filtro);
         return ResponseEntity.ok(ApiResponse.of(ApiResponseEnum.OK, PageResponse.desde(cuentas)));
-    }
-
-    // Consultar saldo de una cuenta
-    @Operation(summary = "Consultar saldo de cuenta",
-            description = "Método GET con el número de cuenta enviado en el cuerpo (DTO).",
-            requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(required = true,
-                    description = "Número de cuenta: {\"numeroCuenta\":\"...\"}",
-                    content = @io.swagger.v3.oas.annotations.media.Content(schema = @io.swagger.v3.oas.annotations.media.Schema(
-                            implementation = CuentaNumeroRequest.class))))
-    @GetMapping(value = "/cuentas/saldo", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<ApiResponse<BigDecimal>> consultarSaldo(
-            @io.swagger.v3.oas.annotations.Parameter(hidden = true)
-            @Valid @RequestBody CuentaNumeroRequest request) {
-        CuentaResponse cuenta = cuentaService.obtenerCuentaPorNumero(request.getNumeroCuenta());
-        return ResponseEntity.ok(ApiResponse.of(ApiResponseEnum.OK, cuenta.getSaldo()));
     }
 
     // Crear cuenta
@@ -96,9 +77,9 @@ public class CuentaController {
         return new ResponseEntity<>(ApiResponse.of(ApiResponseEnum.CREADO, cuenta), HttpStatus.CREATED);
     }
 
-    // Actualizar cuenta (número, saldo o estatus) - PUT según requisito académico
+    // Actualizar cuenta (número, saldo o estatus) - POST según requisito académico
     @Operation(summary = "Actualizar cuenta (identificador por número de cuenta)")
-    @PutMapping(value = "/cuentas/actualizar", produces = MediaType.APPLICATION_JSON_VALUE,
+    @PostMapping(value = "/cuentas/actualizar", produces = MediaType.APPLICATION_JSON_VALUE,
             consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ApiResponse<CuentaResponse>> actualizarCuenta(
             @Valid @RequestBody CuentaUpdateRequest request) {

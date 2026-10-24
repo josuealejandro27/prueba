@@ -69,7 +69,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             SecurityContextHolder.clearContext();
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             response.setContentType("application/json");
-            response.getWriter().write("{\"code\":\"UNAUTHORIZED\",\"message\":\"Token inválido o expirado\"}");
+            response.setCharacterEncoding("UTF-8");
+            // Mismo envoltorio JSON que ApiResponse (code, message, timestamp, data)
+            response.getWriter().write("{\"code\":\"UNAUTHORIZED\",\"message\":\"Token inválido o expirado\","
+                    + "\"timestamp\":\"" + java.time.LocalDateTime.now() + "\",\"data\":null}");
         }
     }
 }

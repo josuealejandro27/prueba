@@ -23,6 +23,7 @@ import java.net.SocketTimeoutException;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.TimeoutException;
 
 /**
@@ -238,11 +239,13 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> manejarExceptionGenerica(Exception ex) {
-        log.error("Error no controlado: {}", ex.getMessage(), ex);
+        String folio = UUID.randomUUID().toString();
+        log.error("Error no controlado [folio {}]: {}", folio, ex.getMessage(), ex);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(ApiResponse.<Void>builder()
                         .code("ERROR_INTERNO")
-                        .message("Ocurrió un error interno en el servidor")
+                        .message("No se pudo completar la operación por un fallo interno; "
+                                + "repórtelo indicando el folio " + folio)
                         .timestamp(LocalDateTime.now())
                         .data(null)
                         .build());

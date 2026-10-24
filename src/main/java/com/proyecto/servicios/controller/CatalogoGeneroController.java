@@ -16,10 +16,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -38,7 +35,7 @@ public class CatalogoGeneroController {
                     description = "Identificador del registro: {\"id\":1}",
                     content = @io.swagger.v3.oas.annotations.media.Content(schema = @io.swagger.v3.oas.annotations.media.Schema(
                             implementation = CatalogoIdRequest.class))))
-    @GetMapping(value = "/catalogos/genero/consultar", produces = MediaType.APPLICATION_JSON_VALUE)
+    @PostMapping(value = "/catalogos/genero/consultar", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ApiResponse<CatalogoGeneroResponse>> obtenerPorId(
             @io.swagger.v3.oas.annotations.Parameter(hidden = true)
             @Valid @RequestBody CatalogoIdRequest request) {
@@ -56,7 +53,7 @@ public class CatalogoGeneroController {
                     description = "Criterios de búsqueda y paginación, todos opcionales. Ejemplo: {\"tipo\":\"...\",\"pagina\":1,\"tamano\":10}",
                     content = @io.swagger.v3.oas.annotations.media.Content(schema = @io.swagger.v3.oas.annotations.media.Schema(
                             implementation = CatalogoGeneroSearchRequest.class))))
-    @GetMapping(value = "/catalogos/genero/buscar", produces = MediaType.APPLICATION_JSON_VALUE)
+    @PostMapping(value = "/catalogos/genero/buscar", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ApiResponse<PageResponse<CatalogoGeneroResponse>>> buscar(
             @io.swagger.v3.oas.annotations.Parameter(hidden = true)
             @Valid @RequestBody(required = false) CatalogoGeneroSearchRequest request) {
@@ -75,7 +72,7 @@ public class CatalogoGeneroController {
     }
 
     @Operation(summary = "Actualizar género")
-    @PutMapping(value = "/catalogos/genero/actualizar", produces = MediaType.APPLICATION_JSON_VALUE,
+    @PostMapping(value = "/catalogos/genero/actualizar", produces = MediaType.APPLICATION_JSON_VALUE,
             consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ApiResponse<CatalogoGeneroResponse>> actualizar(
             @Valid @RequestBody CatalogoGeneroActualizaRequest request) {
@@ -84,7 +81,7 @@ public class CatalogoGeneroController {
     }
 
     @Operation(summary = "Eliminar género")
-    @PatchMapping(value = "/catalogos/genero/eliminar", produces = MediaType.APPLICATION_JSON_VALUE,
+    @PostMapping(value = "/catalogos/genero/eliminar", produces = MediaType.APPLICATION_JSON_VALUE,
             consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ApiResponse<Void>> eliminar(@Valid @RequestBody CatalogoIdRequest request) {
         catalogoGeneroService.eliminar(request.getId());

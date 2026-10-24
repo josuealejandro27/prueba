@@ -30,18 +30,17 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
  * Verifica el contrato HTTP del {@code ClienteController}: consultas y
- * búsquedas con método GET recibiendo el DTO de criterios (con filtros y
- * paginación opcionales) por {@code @RequestBody}, altas en POST y
- * actualizaciones en PUT/PATCH, validación centralizada en el
- * {@code GlobalExceptionHandler} y ausencia de rutas con {@code @PathVariable}
- * o {@code @RequestParam}.
+ * búsquedas en método POST recibiendo el DTO de criterios (con filtros y
+ * paginación opcionales) por {@code @RequestBody}, y todas las operaciones
+ * (alta, actualización, activación y bloqueos) resueltas con POST, validación
+ * centralizada en el {@code GlobalExceptionHandler} y ausencia de rutas con
+ * {@code @PathVariable} o {@code @RequestParam}.
  */
 @ExtendWith(MockitoExtension.class)
 class ClienteControllerTest {
@@ -117,7 +116,7 @@ class ClienteControllerTest {
         when(clienteService.buscarClientes(any(ClienteSearchRequest.class)))
                 .thenReturn(new PageImpl<>(List.of(clienteResponse), PageRequest.of(1, 10), 21));
 
-        mockMvc.perform(get("/clientes/buscar")
+        mockMvc.perform(post("/clientes/buscar")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"curp\":\"PERJ900520HDFRPN09\",\"pagina\":1,\"tamano\":10}"))
                 .andExpect(status().isOk())
@@ -140,7 +139,7 @@ class ClienteControllerTest {
         when(clienteService.buscarClientes(any(ClienteSearchRequest.class)))
                 .thenReturn(new PageImpl<>(List.of(clienteResponse), PageRequest.of(0, 10), 1));
 
-        mockMvc.perform(get("/clientes/buscar"))
+        mockMvc.perform(post("/clientes/buscar"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.pagina").value(0))
                 .andExpect(jsonPath("$.data.tamano").value(10));
@@ -154,7 +153,7 @@ class ClienteControllerTest {
 
     @Test
     void buscarClientes_TamanoDePaginaInvalido_Devuelve400() throws Exception {
-        mockMvc.perform(get("/clientes/buscar")
+        mockMvc.perform(post("/clientes/buscar")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"tamano\":500}"))
                 .andExpect(status().isBadRequest());
@@ -164,7 +163,7 @@ class ClienteControllerTest {
 
     @Test
     void consultarCliente_SinId_Devuelve400() throws Exception {
-        mockMvc.perform(get("/clientes/consultar")
+        mockMvc.perform(post("/clientes/consultar")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{}"))
                 .andExpect(status().isBadRequest())

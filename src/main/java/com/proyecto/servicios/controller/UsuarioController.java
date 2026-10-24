@@ -16,10 +16,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -34,13 +31,13 @@ public class UsuarioController {
     }
 
     @Operation(summary = "Consultar usuario por ID",
-            description = "Método GET con el identificador enviado en el cuerpo (DTO) para respetar la "
+            description = "Método POST con el identificador enviado en el cuerpo (DTO) para respetar la "
                     + "restricción de no usar @PathVariable ni @RequestParam.",
             requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(required = true,
                     description = "Identificador del usuario: {\"id\":1}",
                     content = @io.swagger.v3.oas.annotations.media.Content(schema = @io.swagger.v3.oas.annotations.media.Schema(
                             implementation = UsuarioIdRequest.class))))
-    @GetMapping(value = "/usuarios/consultar", produces = MediaType.APPLICATION_JSON_VALUE)
+    @PostMapping(value = "/usuarios/consultar", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ApiResponse<UsuarioResponse>> obtenerUsuario(
             @io.swagger.v3.oas.annotations.Parameter(hidden = true)
             @Valid @RequestBody UsuarioIdRequest request) {
@@ -59,7 +56,7 @@ public class UsuarioController {
                     description = "Criterios de búsqueda y paginación, todos opcionales. Ejemplo: {\"correo\":\"...\",\"pagina\":1,\"tamano\":10}",
                     content = @io.swagger.v3.oas.annotations.media.Content(schema = @io.swagger.v3.oas.annotations.media.Schema(
                             implementation = UsuarioSearchRequest.class))))
-    @GetMapping(value = "/usuarios/buscar", produces = MediaType.APPLICATION_JSON_VALUE)
+    @PostMapping(value = "/usuarios/buscar", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ApiResponse<PageResponse<UsuarioResponse>>> buscarUsuarios(
             @io.swagger.v3.oas.annotations.Parameter(hidden = true)
             @Valid @RequestBody(required = false) UsuarioSearchRequest request) {
@@ -77,7 +74,7 @@ public class UsuarioController {
     }
 
     @Operation(summary = "Actualizar usuario (parcial)")
-    @PutMapping(value = "/usuarios/actualizar", produces = MediaType.APPLICATION_JSON_VALUE,
+    @PostMapping(value = "/usuarios/actualizar", produces = MediaType.APPLICATION_JSON_VALUE,
             consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ApiResponse<UsuarioResponse>> actualizarUsuario(@Valid @RequestBody UsuarioUpdateRequest request) {
         UsuarioResponse usuario = usuarioService.actualizarUsuario(request);
@@ -85,7 +82,7 @@ public class UsuarioController {
     }
 
     @Operation(summary = "Desactivar usuario (baja lógica)")
-    @PatchMapping(value = "/usuarios/desactivar", produces = MediaType.APPLICATION_JSON_VALUE,
+    @PostMapping(value = "/usuarios/desactivar", produces = MediaType.APPLICATION_JSON_VALUE,
             consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ApiResponse<UsuarioResponse>> desactivarUsuario(@Valid @RequestBody UsuarioIdRequest request) {
         UsuarioResponse usuario = usuarioService.desactivarUsuario(request.getId());
@@ -93,7 +90,7 @@ public class UsuarioController {
     }
 
     @Operation(summary = "Activar usuario")
-    @PatchMapping(value = "/usuarios/activar", produces = MediaType.APPLICATION_JSON_VALUE,
+    @PostMapping(value = "/usuarios/activar", produces = MediaType.APPLICATION_JSON_VALUE,
             consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ApiResponse<UsuarioResponse>> activarUsuario(@Valid @RequestBody UsuarioIdRequest request) {
         UsuarioResponse usuario = usuarioService.activarUsuario(request.getId());

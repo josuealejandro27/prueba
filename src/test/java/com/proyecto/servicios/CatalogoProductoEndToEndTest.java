@@ -193,7 +193,7 @@ class CatalogoProductoEndToEndTest {
                 .compact();
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(token);
-        return testRestTemplate.exchange("/catalogo/productos", HttpMethod.GET, new HttpEntity<>(headers), String.class);
+        return testRestTemplate.exchange("/catalogo/productos", HttpMethod.POST, new HttpEntity<>(headers), String.class);
     }
 
     @BeforeEach

@@ -13,6 +13,8 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 
 import jakarta.servlet.http.HttpServletResponse;
 
+import java.time.LocalDateTime;
+
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
@@ -38,9 +40,9 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.POST, "/auth/login").permitAll()
                 // Público: registro de un cliente
                 .requestMatchers(HttpMethod.POST, "/clientes/agregar").permitAll()
-                // Público: consultas de catálogos (búsqueda y consulta por id) vía GET con DTO en el cuerpo
-                .requestMatchers(HttpMethod.GET, "/catalogos/*/consultar", "/catalogos/*/buscar").permitAll()
-                .requestMatchers(HttpMethod.GET, "/gestopago/catalogo", "/catalogo/productos").permitAll()
+                // Público: consultas de catálogos (búsqueda y consulta por id) vía POST con DTO en el cuerpo
+                .requestMatchers(HttpMethod.POST, "/catalogos/*/consultar", "/catalogos/*/buscar").permitAll()
+                .requestMatchers(HttpMethod.POST, "/gestopago/catalogo", "/catalogo/productos").permitAll()
                 // Documentación e infraestructura
                 .requestMatchers("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**", "/v3/api-docs.yaml").permitAll()
                 .requestMatchers("/actuator/health", "/actuator/info").permitAll()
@@ -48,15 +50,20 @@ public class SecurityConfig {
                 .anyRequest().authenticated()
             )
             .exceptionHandling(ex -> ex
+                // Mismo envoltorio JSON que ApiResponse (code, message, timestamp, data)
                 .authenticationEntryPoint((request, response, authException) -> {
                     response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                     response.setContentType("application/json");
-                    response.getWriter().write("{\"code\":\"UNAUTHORIZED\",\"message\":\"No autenticado o token inválido\"}");
+                    response.setCharacterEncoding("UTF-8");
+                    response.getWriter().write("{\"code\":\"UNAUTHORIZED\",\"message\":\"No autenticado o token inválido\","
+                            + "\"timestamp\":\"" + LocalDateTime.now() + "\",\"data\":null}");
                 })
                 .accessDeniedHandler((request, response, accessDeniedException) -> {
                     response.setStatus(HttpServletResponse.SC_FORBIDDEN);
                     response.setContentType("application/json");
-                    response.getWriter().write("{\"code\":\"FORBIDDEN\",\"message\":\"Acceso denegado\"}");
+                    response.setCharacterEncoding("UTF-8");
+                    response.getWriter().write("{\"code\":\"FORBIDDEN\",\"message\":\"Acceso denegado\","
+                            + "\"timestamp\":\"" + LocalDateTime.now() + "\",\"data\":null}");
                 })
             )
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

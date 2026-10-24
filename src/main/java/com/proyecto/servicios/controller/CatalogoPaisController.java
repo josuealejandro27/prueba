@@ -16,10 +16,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -38,7 +35,7 @@ public class CatalogoPaisController {
                     description = "Identificador del registro: {\"id\":1}",
                     content = @io.swagger.v3.oas.annotations.media.Content(schema = @io.swagger.v3.oas.annotations.media.Schema(
                             implementation = CatalogoIdRequest.class))))
-    @GetMapping(value = "/catalogos/pais/consultar", produces = MediaType.APPLICATION_JSON_VALUE)
+    @PostMapping(value = "/catalogos/pais/consultar", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ApiResponse<CatalogoPaisResponse>> obtenerPorId(
             @io.swagger.v3.oas.annotations.Parameter(hidden = true)
             @Valid @RequestBody CatalogoIdRequest request) {
@@ -55,7 +52,7 @@ public class CatalogoPaisController {
             requestBody = @io.swagger.v3.oas.annotations.parameters.RequestBody(required = false,
                     content = @io.swagger.v3.oas.annotations.media.Content(schema = @io.swagger.v3.oas.annotations.media.Schema(
                             implementation = CatalogoPaisSearchRequest.class))))
-    @GetMapping(value = "/catalogos/pais/buscar", produces = MediaType.APPLICATION_JSON_VALUE)
+    @PostMapping(value = "/catalogos/pais/buscar", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ApiResponse<PageResponse<CatalogoPaisResponse>>> buscar(
             @io.swagger.v3.oas.annotations.Parameter(hidden = true)
             @Valid @RequestBody(required = false) CatalogoPaisSearchRequest request) {
@@ -74,7 +71,7 @@ public class CatalogoPaisController {
     }
 
     @Operation(summary = "Actualizar país")
-    @PutMapping(value = "/catalogos/pais/actualizar", produces = MediaType.APPLICATION_JSON_VALUE,
+    @PostMapping(value = "/catalogos/pais/actualizar", produces = MediaType.APPLICATION_JSON_VALUE,
             consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ApiResponse<CatalogoPaisResponse>> actualizar(
             @Valid @RequestBody CatalogoPaisActualizaRequest request) {
@@ -83,7 +80,7 @@ public class CatalogoPaisController {
     }
 
     @Operation(summary = "Eliminar país")
-    @PatchMapping(value = "/catalogos/pais/eliminar", produces = MediaType.APPLICATION_JSON_VALUE,
+    @PostMapping(value = "/catalogos/pais/eliminar", produces = MediaType.APPLICATION_JSON_VALUE,
             consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ApiResponse<Void>> eliminar(@Valid @RequestBody CatalogoIdRequest request) {
         catalogoPaisService.eliminar(request.getId());
