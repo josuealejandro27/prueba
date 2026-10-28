@@ -4,6 +4,7 @@ import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.LoggerContext;
 import ch.qos.logback.core.read.ListAppender;
+import com.proyecto.servicios.entity.gestopago.GestoPagoToken;
 import com.proyecto.servicios.entity.mongo.CatalogoProductosCache;
 import com.proyecto.servicios.model.clientes.ClienteRequest;
 import com.proyecto.servicios.model.clientes.ClienteResponse;
@@ -29,6 +30,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -61,18 +63,26 @@ import static org.assertj.core.api.Assertions.assertThat;
  * Prueba end-to-end de la integración del catálogo de productos:
  * <ul>
  *   <li>Servicio externo simulado (mock HTTP) consumido vía OpenFeign.</li>
- *   <li>Bearer Token resuelto desde PostgreSQL (no desde properties).</li>
+ *   <li>Bearer Token resuelto desde la base de datos SQL (no desde properties).</li>
  *   <li>Política de reintentos + alerta crítica.</li>
- *   <li>Caché en MongoDB y consulta vía endpoint local.</li>
+ *   <li>Caché de MongoDB simulada en memoria y consulta vía endpoint local.</li>
  * </ul>
- * Requiere PostgreSQL (5432) y MongoDB (27017) disponibles.
+ * No requiere servicios externos ni credenciales reales: PostgreSQL se sustituye
+ * por H2 en memoria (modo PostgreSQL), MongoDB por un repositorio en memoria y
+ * GestoPago por un mock HTTP local.
+ * <p>
+ * La prueba {@code upsertTokenConcurrente} valida el {@code INSERT ... ON CONFLICT}
+ * nativo de PostgreSQL, que H2 no soporta. Solo se ejecuta cuando se apunta a un
+ * PostgreSQL real con {@code -Dtest.db.url=jdbc:postgresql://...} (ver build.gradle).
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 class CatalogoProductoEndToEndTest {
 
     private static final String TOKEN_PRUEBA = "Bearer TOKEN_E2E_123";
-    /** Token que devuelve el auth simulado y que PostgreSQL guarda en la BD de pruebas. */
-    private static final String TOKEN_DESDE_POSTGRES = "Bearer token-mock";
+    /** Token que devuelve el auth simulado y que se guarda en la BD SQL de pruebas. */
+    private static final String TOKEN_DESDE_BD = "Bearer token-mock";
+    private static final int ID_DISTRIBUIDOR_PRUEBA = 999;
+    private static final String CODIGO_DISPOSITIVO_PRUEBA = "TEST-CATALOGO-E2E";
 
     private static HttpServer server;
     private static int puertoMock;
@@ -141,9 +151,46 @@ class CatalogoProductoEndToEndTest {
         // El refresh de token también se redirige al mock: sin llamadas a internet
         registry.add("gestopago.auth.url", () -> "http://localhost:" + puertoMock);
         // Credenciales aisladas de prueba: no se toca el token real del distribuidor
-        registry.add("gestopago.auth.id-distribuidor", () -> "999");
-        registry.add("gestopago.auth.codigo-dispositivo", () -> "TEST-CATALOGO-E2E");
+        registry.add("gestopago.auth.id-distribuidor", () -> String.valueOf(ID_DISTRIBUIDOR_PRUEBA));
+        registry.add("gestopago.auth.codigo-dispositivo", () -> CODIGO_DISPOSITIVO_PRUEBA);
         registry.add("spring.data.mongodb.database", () -> "catalogo_cache_e2e_test");
+        // Puerto sin servicio: si el repositorio en memoria no se usara, la prueba
+        // fallaría en vez de conectarse silenciosamente a un MongoDB local.
+        registry.add("spring.data.mongodb.uri", () -> "mongodb://127.0.0.1:1/catalogo_cache_e2e_test");
+        // Base de datos H2 aislada en memoria para pruebas E2E
+        registry.add("spring.datasource.url", () -> System.getProperty("test.db.url",
+                "jdbc:h2:mem:catalogo_e2e;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH;DB_CLOSE_DELAY=-1"));
+        registry.add("spring.datasource.username", () -> System.getProperty("test.db.user", "sa"));
+        registry.add("spring.datasource.password", () -> System.getProperty("test.db.password", ""));
+        registry.add("spring.datasource.driver-class-name", () -> System.getProperty("test.db.driver", "org.h2.Driver"));
+        registry.add("jwt.secret", () -> "clave_secreta_jwt_para_pruebas_e2e_de_al_menos_32_bytes_12345");
+        registry.add("spring.flyway.locations", () -> "classpath:db/migration_test");
+    }
+
+    @org.springframework.boot.test.context.TestConfiguration
+    static class TestMongoConfig {
+        private final java.util.Map<String, CatalogoProductosCache> store = new java.util.concurrent.ConcurrentHashMap<>();
+
+        @org.springframework.context.annotation.Bean
+        @org.springframework.context.annotation.Primary
+        public CatalogoProductosCacheRepository testCatalogoProductosCacheRepository() {
+            CatalogoProductosCacheRepository mockRepo = org.mockito.Mockito.mock(CatalogoProductosCacheRepository.class);
+            org.mockito.Mockito.when(mockRepo.save(org.mockito.Mockito.any(CatalogoProductosCache.class)))
+                    .thenAnswer(inv -> {
+                        CatalogoProductosCache c = inv.getArgument(0);
+                        store.put(c.getId(), c);
+                        return c;
+                    });
+            org.mockito.Mockito.when(mockRepo.findById(org.mockito.Mockito.anyString()))
+                    .thenAnswer(inv -> java.util.Optional.ofNullable(store.get(inv.getArgument(0, String.class))));
+            org.mockito.Mockito.doAnswer(inv -> {
+                store.clear();
+                return null;
+            }).when(mockRepo).deleteAll();
+            org.mockito.Mockito.when(mockRepo.count())
+                    .thenAnswer(inv -> (long) store.size());
+            return mockRepo;
+        }
     }
 
     @Autowired
@@ -206,10 +253,36 @@ class CatalogoProductoEndToEndTest {
         AUTH_RECIBIDO[0] = null;
         ACCEPT_RECIBIDO[0] = null;
         cacheRepository.deleteAll();
+        asegurarTokenEnBaseDeDatos();
+    }
+
+    /**
+     * Deja en la BD SQL de pruebas el token que el auth simulado devuelve.
+     * <p>
+     * El refresco programado del token usa el {@code INSERT ... ON CONFLICT} nativo
+     * de PostgreSQL, que H2 no soporta; por eso la prueba siembra la fila con JPA
+     * (portable entre H2 y PostgreSQL) para validar que el interceptor Feign lee
+     * el Bearer de la base de datos y no del valor de respaldo de properties.
+     */
+    private void asegurarTokenEnBaseDeDatos() {
+        boolean existe = tokenRepository
+                .findByIdDistribuidorAndCodigoDispositivo(ID_DISTRIBUIDOR_PRUEBA, CODIGO_DISPOSITIVO_PRUEBA)
+                .isPresent();
+        if (existe) {
+            return;
+        }
+        GestoPagoToken token = new GestoPagoToken();
+        token.setIdDistribuidor(ID_DISTRIBUIDOR_PRUEBA);
+        token.setCodigoDispositivo(CODIGO_DISPOSITIVO_PRUEBA);
+        token.setToken("token-mock");
+        token.setTokenType("Bearer");
+        token.setExpiresIn(3600L);
+        token.setActivo(true);
+        tokenRepository.save(token);
     }
 
     @Test
-    @DisplayName("Los repositorios JPA de clientes y catálogos se registran y consultan PostgreSQL")
+    @DisplayName("Los repositorios JPA de clientes y catálogos se registran y consultan la base de datos SQL")
     void repositoriosJpaDisponibles() {
         assertThat(usuarioRepository.count()).isGreaterThanOrEqualTo(0);
         assertThat(personaFisicaRepository.findByIdWithDetails(-1L)).isEmpty();
@@ -218,7 +291,12 @@ class CatalogoProductoEndToEndTest {
     }
 
     @Test
-    @DisplayName("Dos renovaciones simultáneas insertan un solo token y las posteriores conservan su ID")
+    @EnabledIfSystemProperty(
+            named = "test.db.url",
+            matches = "jdbc:postgresql:.*",
+            disabledReason = "H2 no soporta el INSERT ... ON CONFLICT DO UPDATE nativo de PostgreSQL. "
+                    + "Ejecute con -Dtest.db.url=jdbc:postgresql://... para validar el upsert real.")
+    @DisplayName("Dos renovaciones simultáneas insertan un solo token y las posteriores conservan su ID (PostgreSQL real)")
     void upsertTokenConcurrente() throws Exception {
         int distribuidorPrueba = 9999;
         String dispositivoPrueba = "TEST-UPSERT-" + UUID.randomUUID();
@@ -368,9 +446,9 @@ class CatalogoProductoEndToEndTest {
         // 1 sola llamada: sin reintentos
         assertThat(LLAMADAS_PRODUCTOS.get()).isEqualTo(1);
 
-        // El Bearer Token vino de PostgreSQL (generado por el sistema al iniciar),
+        // El Bearer Token vino de la base de datos SQL (sembrado por la prueba),
         // no de application.properties (TOKEN_PRUEBA solo queda como respaldo)
-        assertThat(AUTH_RECIBIDO[0]).isEqualTo(TOKEN_DESDE_POSTGRES)
+        assertThat(AUTH_RECIBIDO[0]).isEqualTo(TOKEN_DESDE_BD)
                 .isNotEqualTo(TOKEN_PRUEBA);
 
         // Negociación explícita: el servicio externo responde XML

@@ -39,7 +39,7 @@ class AuthServiceTest {
         authService = new AuthServiceImpl();
         injectField("usuarioRepository", usuarioRepository);
         injectField("passwordEncoder", passwordEncoder);
-        injectField("jwtSecret", "miClaveSecretaSuperSeguraParaJWT2024");
+        injectField("jwtSecret", "clave_jwt_de_prueba_con_al_menos_32_caracteres_2024");
         injectField("jwtExpiration", 86400000L);
 
         request = new LoginRequest();
