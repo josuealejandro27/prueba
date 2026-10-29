@@ -30,7 +30,8 @@ import java.util.Map;
                 "com.proyecto.servicios.repositorys.sf",
                 "com.proyecto.servicios.repositorys.gestopago",
                 "com.proyecto.servicios.repositorys.catalogos",
-                "com.proyecto.servicios.repositorys.clientes"
+                "com.proyecto.servicios.repositorys.clientes",
+                "com.proyecto.servicios.repositorys.transacciones"
         },
         transactionManagerRef = "sfTransactionManager",
         entityManagerFactoryRef = "sfEntityManagerFactory"
@@ -88,7 +89,8 @@ public class ConfigDB {
                   "com.proyecto.servicios.entity.sf",
                   "com.proyecto.servicios.entity.gestopago",
                   "com.proyecto.servicios.entity.catalogos",
-                  "com.proyecto.servicios.entity.clientes"
+                  "com.proyecto.servicios.entity.clientes",
+                  "com.proyecto.servicios.entity.transacciones"
           );
           em.setPersistenceUnitName("sfDatasource");
             HibernateJpaVendorAdapter vendorAdapter = new HibernateJpaVendorAdapter();
