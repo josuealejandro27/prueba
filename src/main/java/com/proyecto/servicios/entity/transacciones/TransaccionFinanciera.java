@@ -38,7 +38,7 @@ public class TransaccionFinanciera {
     private String idempotencyKey;
 
     @NotNull
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "cuenta_id", nullable = false)
     private CuentaBancaria cuenta;
 

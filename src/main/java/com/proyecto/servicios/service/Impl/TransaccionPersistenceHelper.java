@@ -145,15 +145,19 @@ public class TransaccionPersistenceHelper {
         return transaccionRepository.save(tx);
     }
 
+    @Transactional(readOnly = true)
     public PagoResponse construirPagoResponse(TransaccionFinanciera tx) {
-        BigDecimal saldoRestante = cuentaRepository.findByNumeroCuenta(tx.getCuenta().getNumeroCuenta())
-                .map(CuentaBancaria::getSaldo)
-                .orElse(BigDecimal.ZERO);
+        String numCuenta = tx.getCuenta() != null ? tx.getCuenta().getNumeroCuenta() : null;
+        BigDecimal saldoRestante = numCuenta != null
+                ? cuentaRepository.findByNumeroCuenta(numCuenta)
+                    .map(CuentaBancaria::getSaldo)
+                    .orElse(BigDecimal.ZERO)
+                : BigDecimal.ZERO;
 
         return PagoResponse.builder()
                 .folio(tx.getFolio())
                 .idempotencyKey(tx.getIdempotencyKey())
-                .numeroCuenta(tx.getCuenta().getNumeroCuenta())
+                .numeroCuenta(numCuenta)
                 .monto(tx.getMonto())
                 .estado(tx.getEstado())
                 .codigoRespuestaProveedor(tx.getCodigoRespuestaProveedor())
