@@ -96,4 +96,12 @@ public class UsuarioController {
         UsuarioResponse usuario = usuarioService.activarUsuario(request.getId());
         return ResponseEntity.ok(ApiResponse.of(ApiResponseEnum.OK, usuario));
     }
+
+    @Operation(summary = "Eliminar usuario (baja física)")
+    @PostMapping(value = "/usuarios/eliminar", produces = MediaType.APPLICATION_JSON_VALUE,
+            consumes = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<ApiResponse<Void>> eliminarUsuario(@Valid @RequestBody UsuarioIdRequest request) {
+        usuarioService.eliminarUsuario(request.getId());
+        return ResponseEntity.ok(ApiResponse.of(ApiResponseEnum.OK, null));
+    }
 }

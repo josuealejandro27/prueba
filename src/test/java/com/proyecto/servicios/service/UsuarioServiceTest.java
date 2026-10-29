@@ -3,6 +3,7 @@ package com.proyecto.servicios.service;
 import com.proyecto.servicios.entity.clientes.PersonaFisica;
 import com.proyecto.servicios.entity.clientes.Usuario;
 import com.proyecto.servicios.exception.UsuarioException;
+import com.proyecto.servicios.exception.UsuarioNoEncontradoException;
 import com.proyecto.servicios.model.clientes.UsuarioCreateRequest;
 import com.proyecto.servicios.model.clientes.UsuarioResponse;
 import com.proyecto.servicios.model.clientes.UsuarioSearchRequest;
@@ -205,6 +206,24 @@ class UsuarioServiceTest {
 
         assertTrue(response.isActivo());
         verify(usuarioRepository).save(any());
+    }
+
+    @Test
+    void eliminarUsuario_Exitoso() {
+        when(usuarioRepository.findById(1L)).thenReturn(Optional.of(usuario));
+        doNothing().when(usuarioRepository).delete(usuario);
+
+        usuarioService.eliminarUsuario(1L);
+
+        verify(usuarioRepository).delete(usuario);
+    }
+
+    @Test
+    void eliminarUsuario_NoExistente_LanzaExcepcion() {
+        when(usuarioRepository.findById(99L)).thenReturn(Optional.empty());
+
+        assertThrows(UsuarioNoEncontradoException.class, () -> usuarioService.eliminarUsuario(99L));
+        verify(usuarioRepository, never()).delete(any(Usuario.class));
     }
 
     @Test

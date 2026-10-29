@@ -25,4 +25,6 @@ public interface UsuarioService {
     UsuarioResponse desactivarUsuario(Long id);
 
     UsuarioResponse activarUsuario(Long id);
+
+    void eliminarUsuario(Long id);
 }

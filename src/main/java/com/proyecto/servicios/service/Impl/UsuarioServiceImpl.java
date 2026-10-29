@@ -171,6 +171,18 @@ public class UsuarioServiceImpl implements UsuarioService {
         return mapToResponse(usuario);
     }
 
+    @Override
+    @Transactional
+    public void eliminarUsuario(Long id) {
+        log.info("Eliminando usuario con ID: {}", id);
+
+        Usuario usuario = usuarioRepository.findById(id)
+                .orElseThrow(() -> new UsuarioNoEncontradoException(id));
+
+        usuarioRepository.delete(usuario);
+        log.info("Usuario eliminado exitosamente con ID: {}", id);
+    }
+
     private UsuarioResponse mapToResponse(Usuario usuario) {
         UsuarioResponse response = new UsuarioResponse();
         response.setId(usuario.getId());
