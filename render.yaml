@@ -1,0 +1,44 @@
+# Render Blueprint Specification
+# Sistema Bancario Core - Integración Gestopago
+services:
+  - type: web
+    name: core-bancario-gestopago
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    region: oregon
+    healthCheckPath: /actuator/health
+    envVars:
+      - key: PORT
+        value: 10000
+      - key: SPRING_PROFILES_ACTIVE
+        value: prod
+      - key: FEIGN_LOGGER_LEVEL
+        value: basic
+      - key: GESTOPAGO_TX_URL
+        value: https://gestopago.portalventas.net
+      - key: GESTOPAGO_TX_RUTA
+        value: /sistema/service/sendTx.do
+      - key: GESTOPAGO_AES_TRANSFORMATION
+        value: AES/CBC/PKCS5Padding
+      - key: GESTOPAGO_AES_IV
+        value: "0123456789abcdef"
+      - key: GESTOPAGO_AUTH_URL
+        value: https://gestopago.portalventas.net
+      - key: SPRING_DATASOURCE_URL
+        sync: false
+      - key: SPRING_DATASOURCE_USERNAME
+        sync: false
+      - key: SPRING_DATASOURCE_PASSWORD
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: GESTOPAGO_AES_KEY
+        sync: false
+      - key: GESTOPAGO_AUTH_ID_DISTRIBUIDOR
+        sync: false
+      - key: GESTOPAGO_AUTH_CODIGO_DISPOSITIVO
+        sync: false
+      - key: GESTOPAGO_AUTH_PASSWORD
+        sync: false
+
