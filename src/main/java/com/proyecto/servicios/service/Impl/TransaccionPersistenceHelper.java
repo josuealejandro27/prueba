@@ -98,8 +98,8 @@ public class TransaccionPersistenceHelper {
     public TransaccionFinanciera liquidarExito(Long txId, GestoPagoTxResponse response) {
         TransaccionFinanciera tx = transaccionRepository.findById(txId).orElseThrow();
         tx.setEstado(EstadoTransaccion.EXITOSA);
-        tx.setCodigoRespuestaProveedor(response != null ? response.getCodigo() : "0");
-        tx.setMensajeProveedor(response != null ? response.getMensaje() : "TRANSACCION EXITOSA");
+        tx.setCodigoRespuestaProveedor(response != null && response.getCodigo() != null ? response.getCodigo() : "0");
+        tx.setMensajeProveedor(response != null && response.getMensaje() != null ? response.getMensaje() : "TRANSACCION EXITOSA");
         tx.setFolioProveedor(response != null ? response.getFolio() : null);
         return transaccionRepository.save(tx);
     }
@@ -115,8 +115,8 @@ public class TransaccionPersistenceHelper {
         cuentaRepository.save(cuenta);
 
         tx.setEstado(EstadoTransaccion.RECHAZADA);
-        tx.setCodigoRespuestaProveedor(response != null ? response.getCodigo() : "RECHAZADO");
-        tx.setMensajeProveedor(response != null ? response.getMensaje() : "Transacción rechazada por el proveedor");
+        tx.setCodigoRespuestaProveedor(response != null && response.getCodigo() != null ? response.getCodigo() : "RECHAZADO");
+        tx.setMensajeProveedor(response != null && response.getMensaje() != null ? response.getMensaje() : "Transacción rechazada por el proveedor");
         tx.setFolioProveedor(response != null ? response.getFolio() : null);
         return transaccionRepository.save(tx);
     }
