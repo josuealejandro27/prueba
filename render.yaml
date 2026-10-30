@@ -15,30 +15,43 @@ services:
         value: prod
       - key: FEIGN_LOGGER_LEVEL
         value: basic
+      - key: H2_CONSOLE_ENABLED
+        value: "false"
+      - key: CORS_ALLOWED_ORIGINS
+        sync: false
+      - key: DB_URL
+        sync: false
+      - key: DB_USERNAME
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: MONGODB_URI
+        sync: false
+      - key: MONGODB_DATABASE
+        value: catalogo_cache
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRATION
+        value: "86400000"
+      - key: GESTOPAGO_AUTH_URL
+        value: https://gestopago.portalventas.net
+      - key: GESTOPAGO_PRODUCTOS_URL
+        value: https://gestopago.portalventas.net
+      - key: GESTOPAGO_PRODUCTOS_RUTA
+        value: /sistema/service/getProductList.do
       - key: GESTOPAGO_TX_URL
         value: https://gestopago.portalventas.net
       - key: GESTOPAGO_TX_RUTA
         value: /sistema/service/sendTx.do
+      - key: GESTOPAGO_DISTRIBUIDOR_ID
+        sync: false
+      - key: GESTOPAGO_DISPOSITIVO_CODIGO
+        sync: false
+      - key: GESTOPAGO_DISPOSITIVO_PASSWORD
+        sync: false
       - key: GESTOPAGO_AES_TRANSFORMATION
         value: AES/CBC/PKCS5Padding
-      - key: GESTOPAGO_AES_IV
-        value: "0123456789abcdef"
-      - key: GESTOPAGO_AUTH_URL
-        value: https://gestopago.portalventas.net
-      - key: SPRING_DATASOURCE_URL
-        sync: false
-      - key: SPRING_DATASOURCE_USERNAME
-        sync: false
-      - key: SPRING_DATASOURCE_PASSWORD
-        sync: false
-      - key: JWT_SECRET
-        generateValue: true
       - key: GESTOPAGO_AES_KEY
         sync: false
-      - key: GESTOPAGO_AUTH_ID_DISTRIBUIDOR
+      - key: GESTOPAGO_AES_IV
         sync: false
-      - key: GESTOPAGO_AUTH_CODIGO_DISPOSITIVO
-        sync: false
-      - key: GESTOPAGO_AUTH_PASSWORD
-        sync: false
-

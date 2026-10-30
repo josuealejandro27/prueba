@@ -20,7 +20,7 @@ class GestoPagoCryptoServiceTest {
         cryptoService = new GestoPagoCryptoServiceImpl(
                 "mi_clave_secreta_super_segura_aes",
                 "AES/CBC/PKCS5Padding",
-                "0123456789abcdef"
+                "1234567890123456"
         );
     }
 
@@ -72,5 +72,54 @@ class GestoPagoCryptoServiceTest {
         assertThat(cryptoService.cifrar(null)).isNull();
         assertThat(cryptoService.descifrar(null)).isNull();
     }
-}
 
+    @Test
+    @DisplayName("Clave AES vacía o en blanco impide el cifrado lanzando IllegalStateException")
+    void cifrar_ConClaveVacia_LanzaExcepcion() {
+        GestoPagoCryptoService servicioSinClave = new GestoPagoCryptoServiceImpl(
+                "",
+                "AES/CBC/PKCS5Padding",
+                "1234567890123456"
+        );
+
+        assertThatThrownBy(() -> servicioSinClave.cifrar("payload"))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("GESTOPAGO_AES_KEY");
+    }
+
+    @Test
+    @DisplayName("Clave AES predeterminada insegura o demasiado corta es rechazada")
+    void cifrar_ConClaveInseguraOCorta_LanzaExcepcion() {
+        GestoPagoCryptoService servicioClaveDefault = new GestoPagoCryptoServiceImpl(
+                "gestopago_default_secure_key_2026",
+                "AES/CBC/PKCS5Padding",
+                "1234567890123456"
+        );
+
+        assertThatThrownBy(() -> servicioClaveDefault.cifrar("payload"))
+                .isInstanceOf(IllegalStateException.class);
+
+        GestoPagoCryptoService servicioClaveCorta = new GestoPagoCryptoServiceImpl(
+                "corta123",
+                "AES/CBC/PKCS5Padding",
+                "1234567890123456"
+        );
+
+        assertThatThrownBy(() -> servicioClaveCorta.cifrar("payload"))
+                .isInstanceOf(IllegalStateException.class);
+    }
+
+    @Test
+    @DisplayName("IV ausente o con longitud distinta de 16 bytes en modo CBC es rechazado sin rellenar con ceros")
+    void cifrar_ConIvInvalido_LanzaExcepcion() {
+        GestoPagoCryptoService servicioIvCorto = new GestoPagoCryptoServiceImpl(
+                "mi_clave_secreta_super_segura_aes",
+                "AES/CBC/PKCS5Padding",
+                "iv_corto"
+        );
+
+        assertThatThrownBy(() -> servicioIvCorto.cifrar("payload"))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("16 bytes");
+    }
+}

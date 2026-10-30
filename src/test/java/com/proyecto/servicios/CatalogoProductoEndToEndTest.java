@@ -164,6 +164,7 @@ class CatalogoProductoEndToEndTest {
         registry.add("spring.datasource.password", () -> System.getProperty("test.db.password", ""));
         registry.add("spring.datasource.driver-class-name", () -> System.getProperty("test.db.driver", "org.h2.Driver"));
         registry.add("jwt.secret", () -> "clave_secreta_jwt_para_pruebas_e2e_de_al_menos_32_bytes_12345");
+        registry.add("spring.jpa.properties.hibernate.dialect", () -> "org.hibernate.dialect.H2Dialect");
         registry.add("spring.flyway.locations", () -> "classpath:db/migration_test");
     }
 

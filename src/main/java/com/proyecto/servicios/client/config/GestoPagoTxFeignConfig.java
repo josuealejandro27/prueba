@@ -6,14 +6,13 @@ import feign.Request;
 import feign.RequestInterceptor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
 
 import java.util.concurrent.TimeUnit;
 
 /**
  * Configuración exclusiva del cliente OpenFeign de transacciones Gestopago.
+ * No lleva {@code @Configuration} para evitar que Spring Boot registre sus interceptores globalmente.
  */
-@Configuration
 public class GestoPagoTxFeignConfig {
 
     @Bean
