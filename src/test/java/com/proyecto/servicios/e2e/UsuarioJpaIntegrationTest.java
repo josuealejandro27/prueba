@@ -50,17 +50,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  * transacciones, consultas {@code Specification} combinadas, restricciones de la BD y
  * protección de los campos controlados por el servidor. Las filas se revierten al final de
  * cada prueba ({@code @DataJpaTest} es transaccional), por lo que no se altera ningún dato real.</p>
- *
- * <p>Ejecución contra PostgreSQL local:</p>
- * <pre>
- * docker run ... -p 5432:5432 -e POSTGRES_PASSWORD=postgres postgres
- * docker exec &lt;contenedor&gt; createdb -U postgres usuarios_e2e
- * ./gradlew test --tests "*UsuarioJpaIntegrationTest" \
- *   -Dtest.db.url=jdbc:postgresql://localhost:5432/usuarios_e2e \
- *   -Dtest.db.user=postgres -Dtest.db.password=postgres \
- *   -Dtest.db.driver=org.postgresql.Driver \
- *   -Dtest.db.dialect=org.hibernate.dialect.PostgreSQLDialect
- * </pre>
  */
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
@@ -306,5 +295,21 @@ class UsuarioJpaIntegrationTest {
         assertThatThrownBy(() -> usuarioService.actualizarUsuario(request))
                 .isInstanceOf(UsuarioException.class)
                 .satisfies(ex -> assertThat(((UsuarioException) ex).getHttpStatus()).isEqualTo(HttpStatus.NOT_FOUND));
+    }
+
+    @Test
+    @DisplayName("Eliminar usuario: borra físicamente de la base de datos")
+    void eliminarUsuarioExitoso() {
+        PersonaFisica cliente = nuevoCliente("delTest");
+        UsuarioResponse creado = usuarioService.crearUsuario(
+                requestAlta(cliente.getId(), "del.test@example.com", "Password123!"));
+
+        assertThat(usuarioRepository.findById(creado.getId())).isPresent();
+
+        usuarioService.eliminarUsuario(creado.getId());
+
+        limpiarPersistencia();
+
+        assertThat(usuarioRepository.findById(creado.getId())).isEmpty();
     }
 }

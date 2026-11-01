@@ -80,4 +80,14 @@ public class ProductoDTO {
     @JsonProperty("showayuda")
     @JacksonXmlProperty(isAttribute = true, localName = "showAyuda")
     private Boolean showAyuda;
+
+    @JsonProperty("upc")
+    @JacksonXmlProperty(isAttribute = true, localName = "upc")
+    @io.swagger.v3.oas.annotations.media.Schema(example = "7501055300075")
+    private String upc;
+
+    @JsonProperty("activo")
+    @JacksonXmlProperty(isAttribute = true, localName = "activo")
+    @io.swagger.v3.oas.annotations.media.Schema(example = "true")
+    private Boolean activo;
 }

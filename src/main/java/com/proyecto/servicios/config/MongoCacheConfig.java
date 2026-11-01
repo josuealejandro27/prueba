@@ -40,9 +40,12 @@ public class MongoCacheConfig extends AbstractMongoClientConfiguration {
 
     @Override
     public MongoClientSettings mongoClientSettings() {
+        if (mongoUri == null || mongoUri.isBlank()) {
+            throw new IllegalStateException("La variable de entorno MONGODB_URI no está configurada.");
+        }
         return MongoClientSettings.builder()
-                .applyConnectionString(new ConnectionString(mongoUri))
-                .applyToClusterSettings(builder -> builder.serverSelectionTimeout(3, TimeUnit.SECONDS))
+                .applyConnectionString(new ConnectionString(mongoUri.trim()))
+                .applyToClusterSettings(builder -> builder.serverSelectionTimeout(5, TimeUnit.SECONDS))
                 .applyToSocketSettings(builder -> builder
                         .connectTimeout((int) connectTimeoutMs, TimeUnit.MILLISECONDS)
                         .readTimeout((int) socketTimeoutMs, TimeUnit.MILLISECONDS))

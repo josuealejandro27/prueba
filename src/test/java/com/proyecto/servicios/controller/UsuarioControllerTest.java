@@ -209,6 +209,41 @@ class UsuarioControllerTest {
     }
 
     @Test
+    void eliminarUsuario_IdValido_Devuelve200() throws Exception {
+        doNothing().when(usuarioService).eliminarUsuario(1L);
+
+        mockMvc.perform(post("/usuarios/eliminar")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"id\":1}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("200"));
+
+        verify(usuarioService).eliminarUsuario(1L);
+    }
+
+    @Test
+    void eliminarUsuario_IdInvalido_Devuelve400() throws Exception {
+        mockMvc.perform(post("/usuarios/eliminar")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"id\":-1}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
+
+        verify(usuarioService, never()).eliminarUsuario(any());
+    }
+
+    @Test
+    void eliminarUsuario_NoExistente_Devuelve404() throws Exception {
+        doThrow(new UsuarioNoEncontradoException(99L)).when(usuarioService).eliminarUsuario(99L);
+
+        mockMvc.perform(post("/usuarios/eliminar")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"id\":99}"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("USUARIO_NO_ENCONTRADO"));
+    }
+
+    @Test
     void crearUsuario_CorreoDuplicado_Devuelve409ConEstructuraUniforme() throws Exception {
         when(usuarioService.crearUsuario(any(UsuarioCreateRequest.class)))
                 .thenThrow(new CorreoDuplicadoException("juan@email.com"));
