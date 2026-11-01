@@ -34,9 +34,9 @@ public class ProductionEnvironmentValidator {
     public static void validarEntorno(Environment env) {
         List<String> faltantesOInvalidas = new ArrayList<>();
 
-        verificarPropiedad(env, "spring.datasource.url", "DB_URL / SPRING_DATASOURCE_URL", faltantesOInvalidas);
-        verificarPropiedad(env, "spring.datasource.username", "DB_USERNAME / SPRING_DATASOURCE_USERNAME", faltantesOInvalidas);
-        verificarPropiedad(env, "spring.datasource.password", "DB_PASSWORD / SPRING_DATASOURCE_PASSWORD", faltantesOInvalidas);
+        verificarPropiedad(env, "spring.datasource.url", "SUPABASE_DB_URL / DB_URL / SPRING_DATASOURCE_URL", faltantesOInvalidas);
+        verificarPropiedad(env, "spring.datasource.username", "SUPABASE_DB_USERNAME / DB_USERNAME / SPRING_DATASOURCE_USERNAME", faltantesOInvalidas);
+        verificarPropiedad(env, "spring.datasource.password", "SUPABASE_DB_PASSWORD / DB_PASSWORD / SPRING_DATASOURCE_PASSWORD", faltantesOInvalidas);
         verificarPropiedad(env, "spring.data.mongodb.uri", "MONGODB_URI", faltantesOInvalidas);
         verificarPropiedad(env, "gestopago.auth.codigo-dispositivo", "GESTOPAGO_DISPOSITIVO_CODIGO", faltantesOInvalidas);
         verificarPropiedad(env, "gestopago.auth.password", "GESTOPAGO_DISPOSITIVO_PASSWORD", faltantesOInvalidas);

@@ -46,23 +46,53 @@ public class ConfigDB {
     public DataSource sfDatasource() {
         HikariConfig config = new HikariConfig();
         try {
-            String jdbcUrl = env.getProperty("spring.datasource.url");
-            if (jdbcUrl == null || jdbcUrl.trim().isEmpty()) {
-                log.warn("Propiedad spring.datasource.url vacía o no configurada. Aplicando valor de desarrollo local: jdbc:postgresql://localhost:5432/usuarios_db");
-                jdbcUrl = "jdbc:postgresql://localhost:5432/usuarios_db";
+            String rawJdbcUrl = env.getProperty("spring.datasource.url");
+            if (rawJdbcUrl == null || rawJdbcUrl.trim().isEmpty()) {
+                rawJdbcUrl = env.getProperty("SUPABASE_DB_URL");
             }
+            if (rawJdbcUrl == null || rawJdbcUrl.trim().isEmpty()) {
+                rawJdbcUrl = env.getProperty("DB_URL");
+            }
+            if (rawJdbcUrl == null || rawJdbcUrl.trim().isEmpty()) {
+                String host = env.getProperty("SUPABASE_DB_HOST", "db.odwnbycqnyxaohqnyjbv.supabase.co");
+                String port = env.getProperty("SUPABASE_DB_PORT", "5432");
+                String db = env.getProperty("SUPABASE_DB_NAME", "postgres");
+                rawJdbcUrl = "jdbc:postgresql://" + host + ":" + port + "/" + db;
+            }
+
             String username = env.getProperty("spring.datasource.username");
+            if (username == null || username.trim().isEmpty()) {
+                username = env.getProperty("SUPABASE_DB_USERNAME");
+            }
+            if (username == null || username.trim().isEmpty()) {
+                username = env.getProperty("DB_USERNAME");
+            }
             if (username == null || username.trim().isEmpty()) {
                 username = "postgres";
             }
+
             String password = env.getProperty("spring.datasource.password");
+            if (password == null || password.trim().isEmpty()) {
+                password = env.getProperty("SUPABASE_DB_PASSWORD");
+            }
+            if (password == null || password.trim().isEmpty()) {
+                password = env.getProperty("DB_PASSWORD");
+            }
             if (password == null) {
-                password = "postgres";
+                password = "";
             }
 
-            config.setJdbcUrl(jdbcUrl);
-            config.setUsername(username);
-            config.setPassword(password);
+            String[] conexion = procesarCredencialesYUrl(rawJdbcUrl, username, password);
+            String cleanJdbcUrl = conexion[0];
+            String resolvedUser = conexion[1];
+            String resolvedPass = conexion[2];
+
+            log.info("Inicializando DataSource principal para base de datos (Host/DB: {}, Usuario: {})",
+                    extraerHostYBaseDeDatos(cleanJdbcUrl), resolvedUser);
+
+            config.setJdbcUrl(cleanJdbcUrl);
+            config.setUsername(resolvedUser);
+            config.setPassword(resolvedPass);
             config.setMaximumPoolSize(intProp("spring.datasource.hikari.maximum-pool-size", 10));
             config.setMinimumIdle(intProp("spring.datasource.hikari.minimum-idle", 2));
             config.setMaxLifetime(longProp("spring.datasource.hikari.max-lifetime", 60000));
@@ -82,6 +112,59 @@ public class ConfigDB {
             log.error("Error fatal inicializando el pool de conexiones de base de datos:", e);
             throw new IllegalStateException("No se pudo inicializar el DataSource principal", e);
         }
+    }
+
+    private String normalizarJdbcUrl(String url) {
+        if (url == null || url.isBlank()) {
+            return "jdbc:postgresql://db.odwnbycqnyxaohqnyjbv.supabase.co:5432/postgres";
+        }
+        String cleanUrl = url.trim();
+        if (cleanUrl.startsWith("postgres://")) {
+            cleanUrl = "jdbc:postgresql://" + cleanUrl.substring("postgres://".length());
+        } else if (cleanUrl.startsWith("postgresql://")) {
+            cleanUrl = "jdbc:postgresql://" + cleanUrl.substring("postgresql://".length());
+        }
+        return cleanUrl;
+    }
+
+    private String[] procesarCredencialesYUrl(String rawUrl, String defaultUser, String defaultPass) {
+        String url = normalizarJdbcUrl(rawUrl);
+        String finalUser = defaultUser;
+        String finalPass = defaultPass;
+
+        // Detectar si la URL contiene user:pass@host
+        int atIndex = url.indexOf('@');
+        int slashSlashIndex = url.indexOf("://");
+        if (atIndex > -1 && slashSlashIndex > -1 && atIndex > slashSlashIndex + 3) {
+            String userInfo = url.substring(slashSlashIndex + 3, atIndex);
+            String restOfUrl = url.substring(atIndex + 1);
+            String protocolPrefix = url.substring(0, slashSlashIndex + 3);
+            url = protocolPrefix + restOfUrl;
+
+            int colonIndex = userInfo.indexOf(':');
+            if (colonIndex > -1) {
+                if (finalUser == null || finalUser.isBlank() || "postgres".equals(finalUser)) {
+                    finalUser = userInfo.substring(0, colonIndex);
+                }
+                if (finalPass == null || finalPass.isBlank()) {
+                    finalPass = userInfo.substring(colonIndex + 1);
+                }
+            } else {
+                if (finalUser == null || finalUser.isBlank() || "postgres".equals(finalUser)) {
+                    finalUser = userInfo;
+                }
+            }
+        }
+        return new String[]{url, finalUser, finalPass};
+    }
+
+    private String extraerHostYBaseDeDatos(String jdbcUrl) {
+        if (jdbcUrl == null) return "desconocido";
+        int idx = jdbcUrl.indexOf("://");
+        if (idx > -1) {
+            return jdbcUrl.substring(idx + 3);
+        }
+        return jdbcUrl;
     }
 
     private int intProp(String key, int fallback) {
