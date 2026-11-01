@@ -54,10 +54,10 @@ public class ConfigDB {
                 rawJdbcUrl = env.getProperty("DB_URL");
             }
             if (rawJdbcUrl == null || rawJdbcUrl.trim().isEmpty()) {
-                String host = env.getProperty("SUPABASE_DB_HOST", "db.odwnbycqnyxaohqnyjbv.supabase.co");
+                String host = env.getProperty("SUPABASE_DB_HOST", "aws-0-us-east-1.pooler.supabase.com");
                 String port = env.getProperty("SUPABASE_DB_PORT", "5432");
                 String db = env.getProperty("SUPABASE_DB_NAME", "postgres");
-                rawJdbcUrl = "jdbc:postgresql://" + host + ":" + port + "/" + db;
+                rawJdbcUrl = "jdbc:postgresql://" + host + ":" + port + "/" + db + "?sslmode=require";
             }
 
             String username = env.getProperty("spring.datasource.username");
@@ -68,7 +68,7 @@ public class ConfigDB {
                 username = env.getProperty("DB_USERNAME");
             }
             if (username == null || username.trim().isEmpty()) {
-                username = "postgres";
+                username = "postgres.odwnbycqnyxaohqnyjbv";
             }
 
             String password = env.getProperty("spring.datasource.password");
@@ -116,7 +116,7 @@ public class ConfigDB {
 
     private String normalizarJdbcUrl(String url) {
         if (url == null || url.isBlank()) {
-            return "jdbc:postgresql://db.odwnbycqnyxaohqnyjbv.supabase.co:5432/postgres";
+            return "jdbc:postgresql://aws-0-us-east-1.pooler.supabase.com:5432/postgres?sslmode=require";
         }
         String cleanUrl = url.trim();
         if (cleanUrl.startsWith("postgres://")) {
